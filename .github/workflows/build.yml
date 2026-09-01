@@ -25,8 +25,8 @@ jobs:
 
       - name: Copy mod source into the MDK
         run: |
-          cp -r src/* mdk/src/
-          cp build.gradle mdk/build.gradle
+          cp -r utilitymod/src/* mdk/src/
+          cp utilitymod/build.gradle mdk/build.gradle
 
       - name: Give Gradle enough heap for decompiling
         run: echo "org.gradle.jvmargs=-Xmx4G" >> mdk/gradle.properties

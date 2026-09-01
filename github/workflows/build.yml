@@ -1,0 +1,48 @@
+name: Build Mod
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out this repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Download Forge 1.8.9 MDK
+        run: |
+          curl -L -o mdk.zip https://maven.minecraftforge.net/net/minecraftforge/forge/1.8.9-11.15.1.2318-1.8.9/forge-1.8.9-11.15.1.2318-1.8.9-mdk.zip
+          mkdir mdk
+          unzip -q mdk.zip -d mdk
+
+      - name: Copy mod source into the MDK
+        run: |
+          cp -r utilitymod/src/* mdk/src/
+          cp utilitymod/build.gradle mdk/build.gradle
+
+      - name: Give Gradle enough heap for decompiling
+        run: echo "org.gradle.jvmargs=-Xmx4G" >> mdk/gradle.properties
+
+      - name: Set up the decompiled workspace
+        working-directory: mdk
+        run: |
+          chmod +x gradlew
+          ./gradlew setupDecompWorkspace --no-daemon
+
+      - name: Build the mod jar
+        working-directory: mdk
+        run: ./gradlew build --no-daemon
+
+      - name: Upload the built jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: utilitymod-jar
+          path: mdk/build/libs/*.jar

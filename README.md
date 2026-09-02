@@ -1,2 +1,4 @@
 Augustus, but for those who cant afford it.
-shit vibecoded client
+ billioniare bipas (trust)
+ for now its shit at bypassing ngl
+ 

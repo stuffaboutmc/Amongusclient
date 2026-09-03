@@ -2,7 +2,6 @@ package com.amongus.client.modules.render;
 
 import com.amongus.client.modules.Module;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
@@ -22,20 +21,29 @@ public class ESP extends Module {
         if (mc.theWorld == null || mc.thePlayer == null) return;
         String mode = getSetting("Mode").getValue();
         if (mode.equals("None")) return;
+
+        double renderX = mc.getRenderManager().viewerPosX;
+        double renderY = mc.getRenderManager().viewerPosY;
+        double renderZ = mc.getRenderManager().viewerPosZ;
+
         for (EntityLivingBase entity : mc.theWorld.playerEntities) {
             if (entity == mc.thePlayer || entity.isDead || entity.getHealth() <= 0) continue;
-            if ((entity instanceof EntityPlayer)) continue;
-            double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * event.partialTicks - RenderManager.renderPosX;
-            double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * event.partialTicks - RenderManager.renderPosY;
-            double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * event.partialTicks - RenderManager.renderPosZ;
+            if (!(entity instanceof EntityPlayer)) continue;
+
+            double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * event.partialTicks - renderX;
+            double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * event.partialTicks - renderY;
+            double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * event.partialTicks - renderZ;
+
             GlStateManager.pushMatrix();
             GlStateManager.disableTexture2D();
             GlStateManager.disableDepth();
             GlStateManager.enableBlend();
             GlStateManager.disableAlpha();
+
             if (mode.contains("Glow")) drawGlow(x, y, z, entity.width, entity.height, new Color(255, 50, 50, 120));
             if (mode.contains("Box")) drawBox(x, y, z, entity.width, entity.height, new Color(255, 50, 50, 200));
             if (mode.contains("Outline")) drawBox(x, y, z, entity.width, entity.height, new Color(255, 50, 50, 255));
+
             GlStateManager.enableAlpha();
             GlStateManager.disableBlend();
             GlStateManager.enableDepth();

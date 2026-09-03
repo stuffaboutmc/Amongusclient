@@ -2,6 +2,8 @@ package com.amongus.client.modules.render;
 
 import com.amongus.client.modules.Module;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.input.Keyboard;
@@ -10,10 +12,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class HUD extends Module {
+    private static final ResourceLocation IMPOSTER = new ResourceLocation("amongus", "textures/imposter.png");
+
     public HUD() {
         super("HUD", Keyboard.KEY_NONE, Category.RENDER, "On-screen info panel.");
-        addSetting(new Setting("Watermark", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("Watermark", new String[]{"Off","Text","Image","Both"}, "Text"));
         addSetting(new Setting("WatermarkText", new String[]{"Amongus","Augustus","Custom"}, "Amongus"));
+        addSetting(new Setting("ImageSize", 10, 100, 32, 2));
         addSetting(new Setting("Coordinates", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("FPS", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("Ping", new String[]{"Off","On"}, "On"));
@@ -23,9 +28,6 @@ public class HUD extends Module {
         addSetting(new Setting("WatermarkY", 1, 100, 5, 1));
         addSetting(new Setting("InfoX", 1, 200, 5, 1));
         addSetting(new Setting("InfoY", 1, 100, 25, 1));
-        addSetting(new Setting("Red", 0, 255, 255, 1));
-        addSetting(new Setting("Green", 0, 255, 0, 1));
-        addSetting(new Setting("Blue", 0, 255, 0, 1));
     }
 
     @SubscribeEvent
@@ -33,36 +35,44 @@ public class HUD extends Module {
         if (event.type != RenderGameOverlayEvent.ElementType.TEXT) return;
         if (mc.theWorld == null || mc.thePlayer == null) return;
 
-        int red = (int) getSetting("Red").getDoubleValue();
-        int green = (int) getSetting("Green").getDoubleValue();
-        int blue = (int) getSetting("Blue").getDoubleValue();
-        Color accent = new Color(red, green, blue, 255);
+        String watermarkMode = getSetting("Watermark").getValue();
+        int wx = (int) getSetting("WatermarkX").getDoubleValue();
+        int wy = (int) getSetting("WatermarkY").getDoubleValue();
+        int imageSize = (int) getSetting("ImageSize").getDoubleValue();
 
-        // Watermark - top left, imposter red default
-        if (getSetting("Watermark").getValue().equals("On")) {
-            int wx = (int) getSetting("WatermarkX").getDoubleValue();
-            int wy = (int) getSetting("WatermarkY").getDoubleValue();
+        // Draw watermark
+        if (watermarkMode.equals("Text") || watermarkMode.equals("Both")) {
             String name = getSetting("WatermarkText").getValue();
             if (name.equals("Custom")) name = "Amongus";
             mc.fontRendererObj.drawStringWithShadow(name, wx + 1, wy + 1, new Color(0, 0, 0, 120).getRGB());
-            mc.fontRendererObj.drawStringWithShadow(name, wx, wy, accent.getRGB());
+            mc.fontRendererObj.drawStringWithShadow(name, wx, wy, new Color(255, 0, 0, 255).getRGB());
         }
 
-        // Info panel
+        if (watermarkMode.equals("Image") || watermarkMode.equals("Both")) {
+            GlStateManager.pushMatrix();
+            GlStateManager.enableBlend();
+            GlStateManager.disableAlpha();
+            mc.getTextureManager().bindTexture(IMPOSTER);
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            GuiScreen.drawModalRectWithCustomSizedTexture(wx, wy, 0, 0, imageSize, imageSize, imageSize, imageSize);
+            GlStateManager.enableAlpha();
+            GlStateManager.disableBlend();
+            GlStateManager.popMatrix();
+        }
+
         int ix = (int) getSetting("InfoX").getDoubleValue();
         int iy = (int) getSetting("InfoY").getDoubleValue();
-        int lineHeight = 10;
         int currentY = iy;
+        int lineHeight = 10;
 
         if (getSetting("Coordinates").getValue().equals("On")) {
-            String coords = "XYZ: " + (int)mc.thePlayer.posX + " " + (int)mc.thePlayer.posY + " " + (int)mc.thePlayer.posZ;
-            mc.fontRendererObj.drawStringWithShadow(coords, ix, currentY, new Color(255, 255, 255, 255).getRGB());
+            mc.fontRendererObj.drawStringWithShadow("XYZ: " + (int)mc.thePlayer.posX + " " + (int)mc.thePlayer.posY + " " + (int)mc.thePlayer.posZ, ix, currentY, -1);
             currentY += lineHeight;
         }
 
         if (getSetting("FPS").getValue().equals("On")) {
-            String fps = "FPS: " + Minecraft.getDebugFPS();
-            mc.fontRendererObj.drawStringWithShadow(fps, ix, currentY, new Color(255, 255, 255, 255).getRGB());
+            String fps = "FPS: " + mc.debug.split(" ")[0];
+            mc.fontRendererObj.drawStringWithShadow(fps, ix, currentY, -1);
             currentY += lineHeight;
         }
 
@@ -71,19 +81,17 @@ public class HUD extends Module {
             if (mc.getNetHandler() != null && mc.getNetHandler().getPlayerInfo(mc.thePlayer.getUniqueID()) != null) {
                 ping = mc.getNetHandler().getPlayerInfo(mc.thePlayer.getUniqueID()).getResponseTime();
             }
-            mc.fontRendererObj.drawStringWithShadow("Ping: " + ping + "ms", ix, currentY, new Color(255, 255, 255, 255).getRGB());
+            mc.fontRendererObj.drawStringWithShadow("Ping: " + ping + "ms", ix, currentY, -1);
             currentY += lineHeight;
         }
 
         if (getSetting("Time").getValue().equals("On")) {
-            String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
-            mc.fontRendererObj.drawStringWithShadow(time, ix, currentY, new Color(255, 255, 255, 255).getRGB());
+            mc.fontRendererObj.drawStringWithShadow(new SimpleDateFormat("HH:mm:ss").format(new Date()), ix, currentY, -1);
             currentY += lineHeight;
         }
 
         if (getSetting("Direction").getValue().equals("On")) {
-            String dir = getDirection();
-            mc.fontRendererObj.drawStringWithShadow(dir, ix, currentY, new Color(255, 255, 255, 255).getRGB());
+            mc.fontRendererObj.drawStringWithShadow(getDirection(), ix, currentY, -1);
         }
     }
 

@@ -12,6 +12,5 @@ public class GhostHand extends Module {
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
         if (event.entity != mc.thePlayer) return;
         if (getSetting("Mode").getValue().equals("None")) return;
-        mc.playerController.blockHitDelay = 0;
     }
 }

@@ -12,22 +12,10 @@ public class Speed extends Module {
     @SubscribeEvent
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
         if (event.entity != mc.thePlayer) return;
-        String mode = getSetting("Mode").getValue();
-        if (mode.equals("None")) return;
-        if (!mc.thePlayer.isMoving()) return;
+        if (getSetting("Mode").getValue().equals("None")) return;
+        if (mc.thePlayer.moveForward == 0 && mc.thePlayer.moveStrafing == 0) return;
         double mult = getSetting("Multiplier").getDoubleValue();
-        if (mode.equals("Basic")) {
-            mc.thePlayer.motionX *= mult;
-            mc.thePlayer.motionZ *= mult;
-        } else if (mode.equals("Advanced")) {
-            double yaw = Math.toRadians(mc.thePlayer.rotationYaw);
-            double boost = 0.3 * mult;
-            mc.thePlayer.motionX += -Math.sin(yaw) * boost;
-            mc.thePlayer.motionZ += Math.cos(yaw) * boost;
-        } else if (mode.equals("Bhop")) {
-            if (mc.thePlayer.onGround) mc.thePlayer.jump();
-            mc.thePlayer.motionX *= 1.5;
-            mc.thePlayer.motionZ *= 1.5;
-        }
+        mc.thePlayer.motionX *= mult;
+        mc.thePlayer.motionZ *= mult;
     }
 }

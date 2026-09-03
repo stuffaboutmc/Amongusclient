@@ -7,7 +7,7 @@ public class ChatFilter extends Module {
     public ChatFilter() {
         super("ChatFilter", Keyboard.KEY_NONE, Category.MISC, "Filters chat messages.");
         addSetting(new Setting("Mode", new String[]{"None","Basic","Advanced"}, "Basic"));
-        addSetting(new Setting("Filter", "badword"));
+        addSetting(new Setting("Filter", new String[]{"badword","spam","advertisement"}, "badword"));
     }
     @SubscribeEvent
     public void onChat(ClientChatReceivedEvent event) {

@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,10 +50,12 @@ public class ClickGUI extends Module {
         private int activeTab = 0;
         private Module selectedModule = null;
         private float openAnimation = 0.0F;
-        private int scrollOffset = 0;
-        private int maxScroll = 0;
-        private int windowWidth = 500;
-        private int windowHeight = 340;
+        private int moduleScrollOffset = 0;
+        private int settingsScrollOffset = 0;
+        private int maxModuleScroll = 0;
+        private int maxSettingsScroll = 0;
+        private int windowWidth = 620;
+        private int windowHeight = 420;
         private boolean minimized = false;
         private boolean maximized = false;
         private boolean dragging = false;
@@ -60,6 +63,12 @@ public class ClickGUI extends Module {
         private int windowX, windowY;
         private Module hoveredModule = null;
         private boolean windowVisible = true;
+
+        private final int MODULE_PANEL_X = 10;
+        private final int MODULE_PANEL_WIDTH = 140;
+        private final int SETTINGS_PANEL_X = 160;
+        private final int PANEL_TOP = 60;
+        private final int PANEL_BOTTOM = 20;
 
         @Override
         public void drawScreen(int mouseX, int mouseY, float partialTicks) {
@@ -79,21 +88,21 @@ public class ClickGUI extends Module {
             if (dragging) { windowX = mouseX - dragOffsetX; windowY = mouseY - dragOffsetY; }
 
             if (minimized) {
-                drawRoundedRect(0, 0, 130, 24, 6, new Color(28, 28, 32, 255).getRGB());
+                drawSmoothRoundedRect(0, 0, 130, 24, 8, new Color(28, 28, 32, 255).getRGB());
                 drawRect(0, 4, 2, 20, ACCENT_WHITE.getRGB());
                 mc.fontRendererObj.drawStringWithShadow("Augustus", 10, 8, TITLE_TEXT.getRGB());
                 super.drawScreen(mouseX, mouseY, partialTicks);
                 return;
             }
 
-            // Rounded shadow
-            drawRoundedRect(windowX + 3, windowY + 3, windowX + w + 3, windowY + h + 3, 12, new Color(0, 0, 0, 110).getRGB());
-            // Rounded main window
-            drawRoundedRect(windowX, windowY, windowX + w, windowY + h, 12, WINDOW_BG.getRGB());
-            // Rounded outline
-            drawRoundedOutline(windowX, windowY, windowX + w, windowY + h, 12, OUTLINE.getRGB());
-            // Rounded title bar
-            drawRoundedRect(windowX, windowY, windowX + w, windowY + 28, 12, TITLE_BAR.getRGB());
+            // Shadow (smooth rounded)
+            drawSmoothRoundedRect(windowX + 3, windowY + 3, windowX + w + 3, windowY + h + 3, 12, new Color(0, 0, 0, 100).getRGB());
+            // Main window (smooth rounded)
+            drawSmoothRoundedRect(windowX, windowY, windowX + w, windowY + h, 12, WINDOW_BG.getRGB());
+            drawSmoothRoundedOutline(windowX, windowY, windowX + w, windowY + h, 12, OUTLINE.getRGB());
+
+            // Title bar
+            drawSmoothRoundedRect(windowX, windowY, windowX + w, windowY + 28, 12, TITLE_BAR.getRGB());
             drawRect(windowX, windowY + 14, windowX + w, windowY + 28, TITLE_BAR.getRGB());
             drawRect(windowX + 2, windowY + 4, windowX + 3, windowY + 24, ACCENT_WHITE.getRGB());
 
@@ -102,13 +111,14 @@ public class ClickGUI extends Module {
             mc.fontRendererObj.drawStringWithShadow("Augustus", (windowX + 12) / 1.4f, (windowY + 8) / 1.4f, TITLE_TEXT.getRGB());
             GlStateManager.popMatrix();
 
+            // Window controls
             int cx = windowX + w - 75;
             int cy = windowY + 7;
             drawControlButton(cx, cy, 16, 14, "_", mouseX, mouseY);
             drawControlButton(cx + 20, cy, 16, 14, "□", mouseX, mouseY);
             drawControlButton(cx + 40, cy, 16, 14, "X", mouseX, mouseY);
 
-            // Square tabs (only window is rounded)
+            // Tabs
             int tx = windowX + 14;
             int ty = windowY + 34;
             for (int i = 0; i < categoryNames.length; i++) {
@@ -123,69 +133,91 @@ public class ClickGUI extends Module {
                 tx += tw + 4;
             }
 
+            // Scroll input: determine which panel the mouse is over
             int dWheel = Mouse.getDWheel();
-            if (dWheel > 0) scrollOffset = Math.max(0, scrollOffset - 1);
-            if (dWheel < 0 && scrollOffset < maxScroll) scrollOffset++;
+            if (dWheel != 0) {
+                if (mouseX >= windowX + MODULE_PANEL_X && mouseX <= windowX + MODULE_PANEL_X + MODULE_PANEL_WIDTH) {
+                    if (dWheel > 0) moduleScrollOffset = Math.max(0, moduleScrollOffset - 1);
+                    else if (moduleScrollOffset < maxModuleScroll) moduleScrollOffset++;
+                } else if (mouseX >= windowX + SETTINGS_PANEL_X && mouseX <= windowX + w - 10) {
+                    if (dWheel > 0) settingsScrollOffset = Math.max(0, settingsScrollOffset - 1);
+                    else if (settingsScrollOffset < maxSettingsScroll) settingsScrollOffset++;
+                }
+            }
 
+            // Draw module panel
             List<Module> modules = getModules(activeTab);
-            maxScroll = Math.max(0, modules.size() - 18);
-            if (scrollOffset > maxScroll) scrollOffset = maxScroll;
+            maxModuleScroll = Math.max(0, modules.size() - 18);
+            moduleScrollOffset = Math.min(moduleScrollOffset, maxModuleScroll);
 
-            int mx = windowX + 14;
-            int my = windowY + 56 - (scrollOffset * 14);
-            hoveredModule = null;
-
+            int moduleY = windowY + PANEL_TOP - (moduleScrollOffset * 14);
             for (Module m : modules) {
-                if (my < windowY + 54) { my += 14; continue; }
-                if (my > windowY + h - 20) break;
-                boolean hovered = mouseX >= mx && mouseX <= mx + 115 && mouseY >= my && mouseY <= my + 12;
+                if (moduleY < windowY + PANEL_TOP - 14) { moduleY += 14; continue; }
+                if (moduleY > windowY + h - PANEL_BOTTOM) break;
+                int mx = windowX + MODULE_PANEL_X;
+                boolean hovered = mouseX >= mx && mouseX <= mx + MODULE_PANEL_WIDTH && mouseY >= moduleY && mouseY <= moduleY + 12;
                 boolean selected = m == selectedModule;
 
                 if (hovered || selected) {
-                    drawRect(mx - 4, my - 1, mx + 115, my + 13, HOVER_BG.getRGB());
-                    if (selected) drawRect(mx - 4, my - 1, mx - 2, my + 13, ACCENT_WHITE.getRGB());
+                    drawRect(mx - 2, moduleY - 1, mx + MODULE_PANEL_WIDTH, moduleY + 13, HOVER_BG.getRGB());
+                    if (selected) drawRect(mx - 2, moduleY - 1, mx, moduleY + 13, ACCENT_WHITE.getRGB());
                     if (hovered) hoveredModule = m;
                 }
                 if (m.isEnabled()) {
-                    drawRect(mx - 4, my - 1, mx + 115, my + 13, MODULE_TOGGLED_BG.getRGB());
-                    if (selected) drawRect(mx - 4, my - 1, mx - 2, my + 13, ACCENT_WHITE.getRGB());
+                    drawRect(mx - 2, moduleY - 1, mx + MODULE_PANEL_WIDTH, moduleY + 13, MODULE_TOGGLED_BG.getRGB());
+                    if (selected) drawRect(mx - 2, moduleY - 1, mx, moduleY + 13, ACCENT_WHITE.getRGB());
                 }
 
                 Color moduleColor = m.isEnabled() ? MODULE_ENABLED : MODULE_DISABLED;
-                mc.fontRendererObj.drawStringWithShadow(m.getName(), mx, my + 2, moduleColor.getRGB());
+                mc.fontRendererObj.drawStringWithShadow(m.getName(), mx + 2, moduleY + 2, moduleColor.getRGB());
+                moduleY += 14;
+            }
 
-                if (selected && m.getSettings().size() > 0) {
-                    int sx = mx + 122;
-                    int sy = my - (m.getSettings().size() / 2) * 13;
-                    for (Module.Setting setting : m.getSettings()) {
-                        if (sy < windowY + 54) { sy += 13; continue; }
-                        if (sy > windowY + h - 20) break;
-                        String sn = setting.getName();
-                        String sv = setting.isSlider() ? String.valueOf(setting.getDoubleValue()) : setting.getValue();
-                        mc.fontRendererObj.drawString(sn + ":", sx, sy + 2, SETTING_LABEL.getRGB());
-                        int vx = sx + mc.fontRendererObj.getStringWidth(sn) + 12;
-                        drawRect(vx - 3, sy, vx + mc.fontRendererObj.getStringWidth(sv) + 6, sy + 11, new Color(20, 20, 23, 255).getRGB());
-                        mc.fontRendererObj.drawString(sv, vx, sy + 2, setting.isSlider() ? SETTING_VALUE_SLIDER.getRGB() : SETTING_VALUE.getRGB());
-                        sy += 13;
-                    }
+            // Draw settings panel
+            if (selectedModule != null) {
+                int settingsX = windowX + SETTINGS_PANEL_X;
+                int settingsWidth = w - SETTINGS_PANEL_X - 10;
+                List<Module.Setting> settings = selectedModule.getSettings();
+                maxSettingsScroll = Math.max(0, settings.size() - 20);
+                settingsScrollOffset = Math.min(settingsScrollOffset, maxSettingsScroll);
+
+                int settingY = windowY + PANEL_TOP - (settingsScrollOffset * 13);
+                for (Module.Setting setting : settings) {
+                    if (settingY < windowY + PANEL_TOP - 13) { settingY += 13; continue; }
+                    if (settingY > windowY + h - PANEL_BOTTOM) break;
+
+                    String sn = setting.getName();
+                    String sv = setting.isSlider() ? String.valueOf(setting.getDoubleValue()) : setting.getValue();
+                    mc.fontRendererObj.drawString(sn + ":", settingsX, settingY + 2, SETTING_LABEL.getRGB());
+                    int vx = settingsX + mc.fontRendererObj.getStringWidth(sn) + 12;
+                    drawRect(vx - 2, settingY, vx + mc.fontRendererObj.getStringWidth(sv) + 4, settingY + 11, new Color(20, 20, 23, 255).getRGB());
+                    mc.fontRendererObj.drawString(sv, vx, settingY + 2, setting.isSlider() ? SETTING_VALUE_SLIDER.getRGB() : SETTING_VALUE.getRGB());
+                    settingY += 13;
                 }
-                my += 14;
             }
 
-            if (maxScroll > 0) {
-                int sbX = windowX + w - 7;
-                int sbH = h - 70;
-                drawRect(sbX, windowY + 56, sbX + 4, windowY + 56 + sbH, SCROLLBAR_TRACK.getRGB());
-                int thumbH = Math.max(20, sbH / (maxScroll + 1));
-                int thumbY = windowY + 56 + (int)((double)scrollOffset / maxScroll * (sbH - thumbH));
-                drawRect(sbX, thumbY, sbX + 4, thumbY + thumbH, SCROLLBAR_THUMB.getRGB());
+            // Scrollbars
+            if (maxModuleScroll > 0) {
+                drawScrollbar(windowX + MODULE_PANEL_X + MODULE_PANEL_WIDTH + 4, windowY + PANEL_TOP, h - PANEL_TOP - PANEL_BOTTOM, moduleScrollOffset, maxModuleScroll);
+            }
+            if (maxSettingsScroll > 0) {
+                drawScrollbar(windowX + w - 8, windowY + PANEL_TOP, h - PANEL_TOP - PANEL_BOTTOM, settingsScrollOffset, maxSettingsScroll);
             }
 
+            // Tooltip
             if (hoveredModule != null && selectedModule != hoveredModule) {
                 drawTooltip(hoveredModule, mouseX, mouseY);
             }
 
             super.drawScreen(mouseX, mouseY, partialTicks);
+        }
+
+        private void drawScrollbar(int x, int y, int totalHeight, int offset, int maxScroll) {
+            int trackHeight = totalHeight;
+            drawRect(x, y, x + 3, y + trackHeight, SCROLLBAR_TRACK.getRGB());
+            int thumbHeight = Math.max(15, trackHeight / (maxScroll + 1));
+            int thumbY = y + (int)((double)offset / maxScroll * (trackHeight - thumbHeight));
+            drawRect(x, thumbY, x + 3, thumbY + thumbHeight, SCROLLBAR_THUMB.getRGB());
         }
 
         private void drawIcons(int mouseX, int mouseY) {
@@ -212,20 +244,80 @@ public class ClickGUI extends Module {
             mc.fontRendererObj.drawString(icon, iconX, y + (h - 8) / 2, new Color(255, 255, 255, 255).getRGB());
         }
 
-        private void drawRoundedRect(int x1, int y1, int x2, int y2, int radius, int color) {
-            drawRect(x1 + radius, y1, x2 - radius, y2, color);
-            drawRect(x1, y1 + radius, x2, y2 - radius, color);
-            drawRect(x1 + radius, y1 + radius, x2 - radius, y2 - radius, color);
+        // Smooth rounded rectangle using GL_TRIANGLE_FAN for corners
+        private void drawSmoothRoundedRect(int x1, int y1, int x2, int y2, int radius, int color) {
+            if (x2 - x1 < radius * 2 || y2 - y1 < radius * 2) {
+                drawRect(x1, y1, x2, y2, color);
+                return;
+            }
+            GlStateManager.enableBlend();
+            GlStateManager.disableTexture2D();
+            GlStateManager.disableAlpha();
+            GL11.glColor4f(((color >> 16) & 0xFF) / 255f, ((color >> 8) & 0xFF) / 255f, (color & 0xFF) / 255f, ((color >> 24) & 0xFF) / 255f);
+            GL11.glBegin(GL11.GL_TRIANGLE_FAN);
+            // Top-left corner
+            GL11.glVertex2f(x1 + radius, y1 + radius);
+            for (int i = 0; i <= 90; i++) {
+                double angle = Math.toRadians(i);
+                GL11.glVertex2f(x1 + radius - (float)(radius * Math.cos(angle)), y1 + radius - (float)(radius * Math.sin(angle)));
+            }
+            // Top-right corner
+            GL11.glVertex2f(x2 - radius, y1 + radius);
+            for (int i = 0; i <= 90; i++) {
+                double angle = Math.toRadians(i);
+                GL11.glVertex2f(x2 - radius + (float)(radius * Math.cos(angle)), y1 + radius - (float)(radius * Math.sin(angle)));
+            }
+            // Bottom-right corner
+            GL11.glVertex2f(x2 - radius, y2 - radius);
+            for (int i = 0; i <= 90; i++) {
+                double angle = Math.toRadians(i);
+                GL11.glVertex2f(x2 - radius + (float)(radius * Math.cos(angle)), y2 - radius + (float)(radius * Math.sin(angle)));
+            }
+            // Bottom-left corner
+            GL11.glVertex2f(x1 + radius, y2 - radius);
+            for (int i = 0; i <= 90; i++) {
+                double angle = Math.toRadians(i);
+                GL11.glVertex2f(x1 + radius - (float)(radius * Math.cos(angle)), y2 - radius + (float)(radius * Math.sin(angle)));
+            }
+            GL11.glEnd();
+            // Fill middle rectangles
+            drawRect(x1 + radius, y1, x2 - radius, y1 + radius, color);
+            drawRect(x1 + radius, y2 - radius, x2 - radius, y2, color);
             drawRect(x1, y1 + radius, x1 + radius, y2 - radius, color);
             drawRect(x2 - radius, y1 + radius, x2, y2 - radius, color);
-            // corners filled as squares is not perfectly round but acceptable for "rounded" look
+            drawRect(x1 + radius, y1 + radius, x2 - radius, y2 - radius, color);
+            GlStateManager.enableTexture2D();
+            GlStateManager.enableAlpha();
+            GlStateManager.disableBlend();
         }
 
-        private void drawRoundedOutline(int x1, int y1, int x2, int y2, int radius, int color) {
-            drawRect(x1, y1 + radius, x1 + 1, y2 - radius, color);
-            drawRect(x2 - 1, y1 + radius, x2, y2 - radius, color);
-            drawRect(x1 + radius, y1, x2 - radius, y1 + 1, color);
-            drawRect(x1 + radius, y2 - 1, x2 - radius, y2, color);
+        private void drawSmoothRoundedOutline(int x1, int y1, int x2, int y2, int radius, int color) {
+            GlStateManager.enableBlend();
+            GlStateManager.disableTexture2D();
+            GlStateManager.disableAlpha();
+            GL11.glColor4f(((color >> 16) & 0xFF) / 255f, ((color >> 8) & 0xFF) / 255f, (color & 0xFF) / 255f, ((color >> 24) & 0xFF) / 255f);
+            GL11.glLineWidth(1.0f);
+            GL11.glBegin(GL11.GL_LINE_LOOP);
+            for (int i = 0; i <= 90; i++) {
+                double angle = Math.toRadians(i);
+                GL11.glVertex2f(x1 + radius - (float)(radius * Math.cos(angle)), y1 + radius - (float)(radius * Math.sin(angle)));
+            }
+            for (int i = 0; i <= 90; i++) {
+                double angle = Math.toRadians(i);
+                GL11.glVertex2f(x2 - radius + (float)(radius * Math.cos(angle)), y1 + radius - (float)(radius * Math.sin(angle)));
+            }
+            for (int i = 0; i <= 90; i++) {
+                double angle = Math.toRadians(i);
+                GL11.glVertex2f(x2 - radius + (float)(radius * Math.cos(angle)), y2 - radius + (float)(radius * Math.sin(angle)));
+            }
+            for (int i = 0; i <= 90; i++) {
+                double angle = Math.toRadians(i);
+                GL11.glVertex2f(x1 + radius - (float)(radius * Math.cos(angle)), y2 - radius + (float)(radius * Math.sin(angle)));
+            }
+            GL11.glEnd();
+            GlStateManager.enableTexture2D();
+            GlStateManager.enableAlpha();
+            GlStateManager.disableBlend();
         }
 
         private void drawTooltip(Module m, int mouseX, int mouseY) {
@@ -282,19 +374,18 @@ public class ClickGUI extends Module {
                 windowVisible = !windowVisible;
                 return;
             }
-
             int paperX = startX + iconSize + gap;
             if (mouseButton == 0 && mouseX >= paperX && mouseX <= paperX + iconSize && mouseY >= y && mouseY <= y + iconSize) {
                 ConfigManager.saveConfig();
                 return;
             }
-
             if (!windowVisible) return;
 
             if (minimized) {
                 if (mouseX >= 0 && mouseX <= 130 && mouseY >= 0 && mouseY <= 24) minimized = false;
                 return;
             }
+
             int w = maximized ? width : windowWidth;
             int h = maximized ? height : windowHeight;
             int cx = windowX + w - 75;
@@ -313,12 +404,12 @@ public class ClickGUI extends Module {
             }
 
             List<Module> modules = getModules(activeTab);
-            int mx = windowX + 14;
-            int my = windowY + 56 - (scrollOffset * 14);
+            int mx = windowX + MODULE_PANEL_X;
+            int my = windowY + PANEL_TOP - (moduleScrollOffset * 14);
             for (Module m : modules) {
-                if (my < windowY + 54) { my += 14; continue; }
-                if (my > windowY + h - 20) break;
-                if (mouseX >= mx && mouseX <= mx + 115 && mouseY >= my && mouseY <= my + 12) {
+                if (my < windowY + PANEL_TOP - 14) { my += 14; continue; }
+                if (my > windowY + h - PANEL_BOTTOM) break;
+                if (mouseX >= mx && mouseX <= mx + MODULE_PANEL_WIDTH && mouseY >= my && mouseY <= my + 12) {
                     if (mouseButton == 0) { m.toggle(); return; }
                     if (mouseButton == 1) { selectedModule = (selectedModule == m) ? null : m; return; }
                 }
@@ -326,25 +417,25 @@ public class ClickGUI extends Module {
             }
 
             if (selectedModule != null) {
-                int idx = modules.indexOf(selectedModule);
-                if (idx >= 0) {
-                    int sx = mx + 122;
-                    int sy = windowY + 56 - (scrollOffset * 14) + (idx * 14) - (selectedModule.getSettings().size() / 2) * 13;
-                    for (Module.Setting setting : selectedModule.getSettings()) {
-                        int vx = sx + mc.fontRendererObj.getStringWidth(setting.getName()) + 12;
-                        String sv = setting.isSlider() ? String.valueOf(setting.getDoubleValue()) : setting.getValue();
-                        int vw = mc.fontRendererObj.getStringWidth(sv);
-                        if (mouseX >= vx - 3 && mouseX <= vx + vw + 6 && mouseY >= sy && mouseY <= sy + 11) {
-                            if (!setting.isSlider()) { setting.cycle(); }
-                            else {
-                                double cur = setting.getDoubleValue();
-                                if (mouseButton == 0) { double next = cur + setting.getIncrement(); if (next <= setting.getMax()) setting.setValue(String.valueOf(next)); }
-                                if (mouseButton == 1) { double next = cur - setting.getIncrement(); if (next >= setting.getMin()) setting.setValue(String.valueOf(next)); }
-                            }
-                            return;
+                int settingsX = windowX + SETTINGS_PANEL_X;
+                int settingsY = windowY + PANEL_TOP - (settingsScrollOffset * 13);
+                for (Module.Setting setting : selectedModule.getSettings()) {
+                    if (settingsY < windowY + PANEL_TOP - 13) { settingsY += 13; continue; }
+                    if (settingsY > windowY + h - PANEL_BOTTOM) break;
+                    String sn = setting.getName();
+                    int vx = settingsX + mc.fontRendererObj.getStringWidth(sn) + 12;
+                    String sv = setting.isSlider() ? String.valueOf(setting.getDoubleValue()) : setting.getValue();
+                    int vw = mc.fontRendererObj.getStringWidth(sv);
+                    if (mouseX >= vx - 2 && mouseX <= vx + vw + 4 && mouseY >= settingsY && mouseY <= settingsY + 11) {
+                        if (!setting.isSlider()) { setting.cycle(); }
+                        else {
+                            double cur = setting.getDoubleValue();
+                            if (mouseButton == 0) { double next = cur + setting.getIncrement(); if (next <= setting.getMax()) setting.setValue(String.valueOf(next)); }
+                            if (mouseButton == 1) { double next = cur - setting.getIncrement(); if (next >= setting.getMin()) setting.setValue(String.valueOf(next)); }
                         }
-                        sy += 13;
+                        return;
                     }
+                    settingsY += 13;
                 }
             }
         }

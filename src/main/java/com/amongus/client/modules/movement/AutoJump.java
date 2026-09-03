@@ -12,7 +12,9 @@ public class AutoJump extends Module {
 
     @SubscribeEvent
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
-        if (event.entity = mc.thePlayer) return;
-        if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && mc.thePlayer.isSneaking()) mc.thePlayer.jump();
+        if (event.entity != mc.thePlayer) return;
+        if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && !mc.thePlayer.isSneaking()) {
+            mc.thePlayer.jump();
+        }
     }
 }

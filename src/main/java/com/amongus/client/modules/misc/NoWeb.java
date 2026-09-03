@@ -12,10 +12,5 @@ public class NoWeb extends Module {
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
         if (event.entity != mc.thePlayer) return;
         if (getSetting("Mode").getValue().equals("None")) return;
-        if (mc.thePlayer.isInWeb) {
-            mc.thePlayer.isInWeb = false;
-            mc.thePlayer.motionX *= 2;
-            mc.thePlayer.motionZ *= 2;
-        }
     }
 }

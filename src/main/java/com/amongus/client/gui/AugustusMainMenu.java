@@ -17,8 +17,12 @@ public class AugustusMainMenu extends GuiScreen {
     private String focusedField = "";
 
     public AugustusMainMenu() {
-        AltManager.init();
-        ThemeManager.init();
+        try {
+            AltManager.init();
+            ThemeManager.init();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -116,12 +120,43 @@ public class AugustusMainMenu extends GuiScreen {
             int pw = 300;
             int ph = 200;
             int iy = py + ph - 80;
-            if (mb == 0 && mx >= px + 190 && mx <= px + 270 && my >= iy + 105 && my <= iy + 120) { altManagerOpen = false; focusedField = ""; return; }
-            if (mb == 0 && mx >= px + 10 && mx <= px + 90 && my >= iy + 85 && my <= iy + 100) { if (!altInput.isEmpty()) { AltManager.addAlt(altInput, emailInput, passwordInput); altInput = ""; emailInput = ""; passwordInput = ""; } return; }
-            if (mb == 0 && mx >= px + 100 && mx <= px + 180 && my >= iy + 85 && my <= iy + 100) { if (!altInput.isEmpty() && !tokenInput.isEmpty()) { AltManager.addTokenAlt(altInput, tokenInput); altInput = ""; tokenInput = ""; } return; }
-            if (mb == 0 && mx >= px + 190 && mx <= px + 270 && my >= iy + 85 && my <= iy + 100) { if (selectedAlt >= 0 && selectedAlt < AltManager.getAlts().size()) AltManager.loginToAlt(AltManager.getAlts().get(selectedAlt)); return; }
-            if (mb == 0 && mx >= px + 10 && mx <= px + 90 && my >= iy + 105 && my <= iy + 120) { if (!altInput.isEmpty()) AltManager.loginOffline(altInput); return; }
-            if (mb == 0 && mx >= px + 100 && mx <= px + 180 && my >= iy + 105 && my <= iy + 120) { AltManager.removeAlt(selectedAlt); selectedAlt = -1; return; }
+            if (mb == 0 && mx >= px + 190 && mx <= px + 270 && my >= iy + 105 && my <= iy + 120) {
+                altManagerOpen = false;
+                focusedField = "";
+                return;
+            }
+            if (mb == 0 && mx >= px + 10 && mx <= px + 90 && my >= iy + 85 && my <= iy + 100) {
+                if (!altInput.isEmpty()) {
+                    AltManager.addAlt(altInput, emailInput, passwordInput);
+                    altInput = "";
+                    emailInput = "";
+                    passwordInput = "";
+                }
+                return;
+            }
+            if (mb == 0 && mx >= px + 100 && mx <= px + 180 && my >= iy + 85 && my <= iy + 100) {
+                if (!altInput.isEmpty() && !tokenInput.isEmpty()) {
+                    AltManager.addTokenAlt(altInput, tokenInput);
+                    altInput = "";
+                    tokenInput = "";
+                }
+                return;
+            }
+            if (mb == 0 && mx >= px + 190 && mx <= px + 270 && my >= iy + 85 && my <= iy + 100) {
+                if (selectedAlt >= 0 && selectedAlt < AltManager.getAlts().size()) {
+                    AltManager.loginToAlt(AltManager.getAlts().get(selectedAlt));
+                }
+                return;
+            }
+            if (mb == 0 && mx >= px + 10 && mx <= px + 90 && my >= iy + 105 && my <= iy + 120) {
+                if (!altInput.isEmpty()) AltManager.loginOffline(altInput);
+                return;
+            }
+            if (mb == 0 && mx >= px + 100 && mx <= px + 180 && my >= iy + 105 && my <= iy + 120) {
+                AltManager.removeAlt(selectedAlt);
+                selectedAlt = -1;
+                return;
+            }
             if (mx >= px + 10 && mx <= px + pw - 10) {
                 if (my >= iy && my <= iy + 15) focusedField = "name";
                 if (my >= iy + 20 && my <= iy + 35) focusedField = "email";
@@ -131,21 +166,32 @@ public class AugustusMainMenu extends GuiScreen {
             List<AltManager.Alt> alts = AltManager.getAlts();
             for (int i = 0; i < Math.min(alts.size(), 8); i++) {
                 int ay = py + 30 + i * 15;
-                if (mx >= px + 10 && mx <= px + pw - 10 && my >= ay && my <= ay + 12) { selectedAlt = i; return; }
+                if (mx >= px + 10 && mx <= px + pw - 10 && my >= ay && my <= ay + 12) {
+                    selectedAlt = i;
+                    return;
+                }
             }
             return;
         }
         if (mb == 0 && mx >= width / 2 - 100 && mx <= width / 2 + 100) {
-            if (my >= height / 2 - 40 && my <= height / 2 - 20) mc.displayGuiScreen(new GuiSelectWorld(this));
-            else if (my >= height / 2 - 15 && my <= height / 2 + 5) mc.displayGuiScreen(new GuiMultiplayer(this));
-            else if (my >= height / 2 + 10 && my <= height / 2 + 30) altManagerOpen = true;
-            else if (my >= height / 2 + 35 && my <= height / 2 + 55) mc.displayGuiScreen(new GuiOptions(this, mc.gameSettings));
-            else if (my >= height / 2 + 60 && my <= height / 2 + 80) mc.shutdown();
+            if (my >= height / 2 - 40 && my <= height / 2 - 20) {
+                mc.displayGuiScreen(new GuiSelectWorld(this));
+            } else if (my >= height / 2 - 15 && my <= height / 2 + 5) {
+                mc.displayGuiScreen(new GuiMultiplayer(this));
+            } else if (my >= height / 2 + 10 && my <= height / 2 + 30) {
+                altManagerOpen = true;
+            } else if (my >= height / 2 + 35 && my <= height / 2 + 55) {
+                mc.displayGuiScreen(new GuiOptions(this, mc.gameSettings));
+            } else if (my >= height / 2 + 60 && my <= height / 2 + 80) {
+                mc.shutdown();
+            }
         }
         if (mb == 0 && mx >= width / 2 - 50 && mx <= width / 2 + 50 && my >= height - 35 && my <= height - 20) {
             List<ThemeManager.Theme> themes = ThemeManager.getThemes();
             int ci = -1;
-            for (int i = 0; i < themes.size(); i++) if (themes.get(i) == ThemeManager.getCurrentTheme()) ci = i;
+            for (int i = 0; i < themes.size(); i++) {
+                if (themes.get(i) == ThemeManager.getCurrentTheme()) ci = i;
+            }
             ci++;
             if (ci >= themes.size()) ci = 0;
             ThemeManager.setTheme(themes.get(ci).name);
@@ -154,7 +200,10 @@ public class AugustusMainMenu extends GuiScreen {
 
     @Override
     protected void keyTyped(char c, int kc) throws IOException {
-        if (!altManagerOpen || focusedField.isEmpty()) { super.keyTyped(c, kc); return; }
+        if (!altManagerOpen || focusedField.isEmpty()) {
+            super.keyTyped(c, kc);
+            return;
+        }
         if (kc == Keyboard.KEY_BACK) {
             if (focusedField.equals("name")) altInput = altInput.substring(0, Math.max(0, altInput.length() - 1));
             if (focusedField.equals("email")) emailInput = emailInput.substring(0, Math.max(0, emailInput.length() - 1));

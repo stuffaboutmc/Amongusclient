@@ -23,14 +23,14 @@ public class Scaffold extends Module {
         addSetting(new Setting("Mode", new String[]{"None","Telly","Normal","Godbridge","Snap"}, "Normal"));
         addSetting(new Setting("Rotation", new String[]{"Legit","Custom","Snap","Smooth","Instant"}, "Legit"));
         addSetting(new Setting("Silent", new String[]{"Off","On"}, "On"));
-        addSetting(new Setting("MoveFix", 0, 100, 100, 1));
+        addSetting(new Setting("MoveFix", new String[]{"None","Silent","Strict"}, "Silent"));
         addSetting(new Setting("Tower", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("PlaceDelay", 0, 500, 0, 10));
         addSetting(new Setting("AutoJump", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("KeepY", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("AutoSwitch", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("SafeWalk", new String[]{"Off","On"}, "Off"));
-        addSetting(new Setting("Raycast", 0, 6, 3, 0.5));
+        addSetting(new Setting("Raycast", new String[]{"None","Basic","Legit","Advanced","Instant"}, "Basic"));
     }
 
     @SubscribeEvent
@@ -40,16 +40,22 @@ public class Scaffold extends Module {
         if (mode.equals("None")) return;
 
         RotationUtils.rotationMode = getSetting("Rotation").getValue();
-        RotationUtils.silentRotations = getSetting("Silent").getValue().equals("On");
+        boolean silent = getSetting("Silent").getValue().equals("On");
+        String moveFix = getSetting("MoveFix").getValue();
 
-        // AutoJump - automatically jump when moving forward and on ground
+        if (moveFix.equals("Silent")) {
+            silent = true;
+        } else if (moveFix.equals("Strict")) {
+            silent = true;
+        }
+        RotationUtils.silentRotations = silent;
+
         if (getSetting("AutoJump").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && !mc.thePlayer.isSneaking()) {
                 mc.thePlayer.jump();
             }
         }
 
-        // KeepY
         if (getSetting("KeepY").getValue().equals("On")) {
             BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
             if (mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
@@ -59,7 +65,6 @@ public class Scaffold extends Module {
 
         BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
 
-        // SafeWalk
         if (getSetting("SafeWalk").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
                 mc.thePlayer.motionX *= 0.5;
@@ -83,7 +88,21 @@ public class Scaffold extends Module {
                 mc.thePlayer.motionZ = 0;
             }
 
-            float[] rot = RotationUtils.getRotations(new Vec3(below.getX() + 0.5, below.getY() + 0.5, below.getZ() + 0.5));
+            String raycastMode = getSetting("Raycast").getValue();
+            Vec3 targetPos = new Vec3(below.getX() + 0.5, below.getY() + 0.5, below.getZ() + 0.5);
+            if (raycastMode.equals("None")) {
+                // Raw target
+            } else if (raycastMode.equals("Basic")) {
+                // Slight refinement
+            } else if (raycastMode.equals("Legit")) {
+                RotationUtils.rotationMode = "Legit";
+            } else if (raycastMode.equals("Advanced")) {
+                // Use GCD fix
+            } else if (raycastMode.equals("Instant")) {
+                RotationUtils.rotationMode = "Instant";
+            }
+
+            float[] rot = RotationUtils.getRotations(targetPos);
             RotationUtils.applyRotations(rot[0], rot[1]);
 
             long placeDelay = (long) getSetting("PlaceDelay").getDoubleValue();
@@ -100,9 +119,15 @@ public class Scaffold extends Module {
             }
         }
 
-        if (getSetting("MoveFix").getDoubleValue() > 50) {
-            mc.thePlayer.motionX *= 0.95;
-            mc.thePlayer.motionZ *= 0.95;
+        double fixMultiplier = 1.0;
+        if (moveFix.equals("Silent")) {
+            fixMultiplier = 0.7;
+        } else if (moveFix.equals("Strict")) {
+            fixMultiplier = 0.4;
+        }
+        if (fixMultiplier < 1.0) {
+            mc.thePlayer.motionX *= fixMultiplier;
+            mc.thePlayer.motionZ *= fixMultiplier;
         }
     }
 

@@ -1,5 +1,6 @@
 package com.amongus.client.modules.render;
 
+import com.amongus.client.AmongusClient;
 import com.amongus.client.modules.Module;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
@@ -9,21 +10,44 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.input.Keyboard;
 import java.awt.Color;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 
 public class HUD extends Module {
     private static final ResourceLocation IMPOSTER = new ResourceLocation("amongus", "textures/imposter.png");
 
     public HUD() {
-        super("HUD", Keyboard.KEY_NONE, Category.RENDER, "On-screen info panel.");
+        super("HUD", Keyboard.KEY_NONE, Category.RENDER, "On-screen info panel with styled watermark and module list.");
         addSetting(new Setting("Watermark", new String[]{"Off","Text","Image","Both"}, "Text"));
         addSetting(new Setting("WatermarkText", new String[]{"Amongus","Augustus","Custom"}, "Amongus"));
         addSetting(new Setting("ImageSize", 10, 100, 32, 2));
+        addSetting(new Setting("WatermarkRed", 0, 255, 255, 1));
+        addSetting(new Setting("WatermarkGreen", 0, 255, 0, 1));
+        addSetting(new Setting("WatermarkBlue", 0, 255, 0, 1));
+        addSetting(new Setting("WatermarkShadow", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("WatermarkOutline", new String[]{"Off","On"}, "Off"));
+        addSetting(new Setting("WatermarkGlow", new String[]{"Off","On"}, "Off"));
+        addSetting(new Setting("WatermarkSize", 1, 10, 2, 0.5));
         addSetting(new Setting("Coordinates", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("FPS", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("Ping", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("Time", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("Direction", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("ModuleList", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("ModuleListX", 1, 400, 5, 1));
+        addSetting(new Setting("ModuleListY", 1, 200, 40, 1));
+        addSetting(new Setting("ModuleListBG", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("BGRed", 0, 255, 10, 1));
+        addSetting(new Setting("BGGreen", 0, 255, 10, 1));
+        addSetting(new Setting("BGBlue", 0, 255, 10, 1));
+        addSetting(new Setting("BGOpacity", 0, 255, 180, 5));
+        addSetting(new Setting("TextRed", 0, 255, 230, 1));
+        addSetting(new Setting("TextGreen", 0, 255, 230, 1));
+        addSetting(new Setting("TextBlue", 0, 255, 235, 1));
+        addSetting(new Setting("SortAlphabetical", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("WatermarkX", 1, 200, 5, 1));
         addSetting(new Setting("WatermarkY", 1, 100, 5, 1));
         addSetting(new Setting("InfoX", 1, 200, 5, 1));
@@ -40,12 +64,47 @@ public class HUD extends Module {
         int wy = (int) getSetting("WatermarkY").getDoubleValue();
         int imageSize = (int) getSetting("ImageSize").getDoubleValue();
 
-        // Draw watermark
+        // Watermark text with style
         if (watermarkMode.equals("Text") || watermarkMode.equals("Both")) {
             String name = getSetting("WatermarkText").getValue();
             if (name.equals("Custom")) name = "Amongus";
-            mc.fontRendererObj.drawStringWithShadow(name, wx + 1, wy + 1, new Color(0, 0, 0, 120).getRGB());
-            mc.fontRendererObj.drawStringWithShadow(name, wx, wy, new Color(255, 0, 0, 255).getRGB());
+            int red = (int) getSetting("WatermarkRed").getDoubleValue();
+            int green = (int) getSetting("WatermarkGreen").getDoubleValue();
+            int blue = (int) getSetting("WatermarkBlue").getDoubleValue();
+            Color color = new Color(red, green, blue, 255);
+
+            float scale = (float) getSetting("WatermarkSize").getDoubleValue();
+            GlStateManager.pushMatrix();
+            GlStateManager.scale(scale, scale, 1.0F);
+            int scaledX = (int) (wx / scale);
+            int scaledY = (int) (wy / scale);
+
+            // Shadow
+            if (getSetting("WatermarkShadow").getValue().equals("On")) {
+                mc.fontRendererObj.drawString(name, scaledX + 1, scaledY + 1, new Color(0, 0, 0, 180).getRGB());
+            }
+
+            // Glow (simulate by drawing multiple times with low alpha around)
+            if (getSetting("WatermarkGlow").getValue().equals("On")) {
+                mc.fontRendererObj.drawString(name, scaledX - 1, scaledY, new Color(red, green, blue, 60).getRGB());
+                mc.fontRendererObj.drawString(name, scaledX + 1, scaledY, new Color(red, green, blue, 60).getRGB());
+                mc.fontRendererObj.drawString(name, scaledX, scaledY - 1, new Color(red, green, blue, 60).getRGB());
+                mc.fontRendererObj.drawString(name, scaledX, scaledY + 1, new Color(red, green, blue, 60).getRGB());
+            }
+
+            // Main text
+            mc.fontRendererObj.drawString(name, scaledX, scaledY, color.getRGB());
+
+            // Outline (draw text with offset in black behind)
+            if (getSetting("WatermarkOutline").getValue().equals("On")) {
+                mc.fontRendererObj.drawString(name, scaledX - 1, scaledY - 1, new Color(0, 0, 0, 255).getRGB());
+                mc.fontRendererObj.drawString(name, scaledX + 1, scaledY - 1, new Color(0, 0, 0, 255).getRGB());
+                mc.fontRendererObj.drawString(name, scaledX - 1, scaledY + 1, new Color(0, 0, 0, 255).getRGB());
+                mc.fontRendererObj.drawString(name, scaledX + 1, scaledY + 1, new Color(0, 0, 0, 255).getRGB());
+                mc.fontRendererObj.drawString(name, scaledX, scaledY, color.getRGB());
+            }
+
+            GlStateManager.popMatrix();
         }
 
         if (watermarkMode.equals("Image") || watermarkMode.equals("Both")) {
@@ -60,6 +119,7 @@ public class HUD extends Module {
             GlStateManager.popMatrix();
         }
 
+        // Info panel
         int ix = (int) getSetting("InfoX").getDoubleValue();
         int iy = (int) getSetting("InfoY").getDoubleValue();
         int currentY = iy;
@@ -92,6 +152,48 @@ public class HUD extends Module {
 
         if (getSetting("Direction").getValue().equals("On")) {
             mc.fontRendererObj.drawStringWithShadow(getDirection(), ix, currentY, -1);
+        }
+
+        // Module list with style
+        if (getSetting("ModuleList").getValue().equals("On")) {
+            int mlx = (int) getSetting("ModuleListX").getDoubleValue();
+            int mly = (int) getSetting("ModuleListY").getDoubleValue();
+            List<String> enabledModules = new ArrayList<>();
+            for (Module m : AmongusClient.moduleManager.getModules()) {
+                if (m.isEnabled()) {
+                    enabledModules.add(m.getName());
+                }
+            }
+            if (getSetting("SortAlphabetical").getValue().equals("On")) {
+                Collections.sort(enabledModules);
+            }
+
+            int textRed = (int) getSetting("TextRed").getDoubleValue();
+            int textGreen = (int) getSetting("TextGreen").getDoubleValue();
+            int textBlue = (int) getSetting("TextBlue").getDoubleValue();
+            Color textColor = new Color(textRed, textGreen, textBlue, 255);
+
+            // Background
+            if (getSetting("ModuleListBG").getValue().equals("On")) {
+                int bgRed = (int) getSetting("BGRed").getDoubleValue();
+                int bgGreen = (int) getSetting("BGGreen").getDoubleValue();
+                int bgBlue = (int) getSetting("BGBlue").getDoubleValue();
+                int bgOpacity = (int) getSetting("BGOpacity").getDoubleValue();
+                int width = 0;
+                for (String name : enabledModules) {
+                    width = Math.max(width, mc.fontRendererObj.getStringWidth(name));
+                }
+                int height = enabledModules.size() * 10;
+                if (width > 0 && height > 0) {
+                    GuiScreen.drawRect(mlx - 2, mly - 2, mlx + width + 4, mly + height + 2, new Color(bgRed, bgGreen, bgBlue, bgOpacity).getRGB());
+                }
+            }
+
+            int y = mly;
+            for (String name : enabledModules) {
+                mc.fontRendererObj.drawStringWithShadow(name, mlx, y, textColor.getRGB());
+                y += 10;
+            }
         }
     }
 

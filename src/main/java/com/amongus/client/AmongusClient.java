@@ -1,5 +1,6 @@
 package com.amongus.client;
 
+import com.amongus.client.gui.GuiHook;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -20,6 +21,8 @@ public class AmongusClient {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(moduleManager);
         MinecraftForge.EVENT_BUS.register(commandManager);
+        new GuiHook();
+        System.out.println("[Amongus] Client initialized.");
     }
 
     @SubscribeEvent

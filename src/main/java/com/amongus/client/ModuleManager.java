@@ -21,7 +21,6 @@ public class ModuleManager {
         modules.add(new AutoClicker());
         modules.add(new TriggerBot());
         modules.add(new BowAimBot());
-        modules.add(new AntiBot());
         modules.add(new NoHitDelay());
         modules.add(new AutoSoup());
         modules.add(new AutoPot());
@@ -165,6 +164,15 @@ public class ModuleManager {
         modules.add(new NameProtect());
     }
 
-    public void handleKey(int key) { for (Module m : modules) if (m.getKey() == key) m.toggle(); }
-    public List<Module> getModules() { return modules; }
+    public void handleKey(int key) {
+        for (Module m : modules) {
+            if (m.getKey() == key) {
+                m.toggle();
+            }
+        }
+    }
+
+    public List<Module> getModules() {
+        return modules;
+    }
 }

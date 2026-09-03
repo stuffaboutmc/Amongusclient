@@ -4,6 +4,7 @@ import net.minecraft.item.ItemFood;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.input.Keyboard;
+import java.lang.reflect.Field;
 public class FastEatPlayer extends Module {
     public FastEatPlayer() {
         super("FastEatPlayer", Keyboard.KEY_NONE, Category.PLAYER, "Eats food instantly.");
@@ -14,7 +15,11 @@ public class FastEatPlayer extends Module {
         if (event.entity != mc.thePlayer) return;
         if (getSetting("Mode").getValue().equals("None")) return;
         if (mc.thePlayer.isUsingItem() && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemFood) {
-            mc.thePlayer.itemInUseCount = 1;
+            try {
+                Field f = net.minecraft.entity.player.EntityPlayer.class.getDeclaredField("itemInUseCount");
+                f.setAccessible(true);
+                f.setInt(mc.thePlayer, 1);
+            } catch (Exception e) {}
         }
     }
 }

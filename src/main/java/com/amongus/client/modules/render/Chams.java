@@ -1,7 +1,6 @@
 package com.amongus.client.modules.render;
 import com.amongus.client.modules.Module;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.input.Keyboard;
@@ -20,10 +19,7 @@ public class Chams extends Module {
         if (getSetting("Mode").getValue().equals("None")) return;
         GlStateManager.enableBlend();
         GlStateManager.disableDepth();
-        for (EntityLivingBase entity : mc.theWorld.playerEntities) {
-            if (entity == mc.thePlayer || entity.isDead) continue;
-            GL11.glColor4f(getSetting("Red").getDoubleValue()/255F, getSetting("Green").getDoubleValue()/255F, getSetting("Blue").getDoubleValue()/255F, 0.5F);
-        }
+        GL11.glColor4f((float)getSetting("Red").getDoubleValue()/255F, (float)getSetting("Green").getDoubleValue()/255F, (float)getSetting("Blue").getDoubleValue()/255F, 0.5F);
         GlStateManager.enableDepth();
         GlStateManager.disableBlend();
     }

@@ -31,30 +31,61 @@ public class KillAura extends Module {
 
     @SubscribeEvent
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
-        if (event.entity = mc.thePlayer) return;
+        if (event.entity != mc.thePlayer) return;
+
         RotationUtils.rotationMode = getSetting("Rotation").getValue();
         RotationUtils.silentRotations = getSetting("Silent").getValue().equals("On");
         String blockMode = getSetting("AutoBlock").getValue();
         double range = getSetting("Range").getDoubleValue();
         int blockSpeed = (int) getSetting("BlockSpeed").getDoubleValue();
         int attackSpeed = (int) getSetting("AttackSpeed").getDoubleValue();
+
         target = RotationUtils.raycastEntity(range);
-        if (target == null) { if (blockMode.equals("Vanilla")) unblock(); return; }
+        if (target == null) {
+            if (!blockMode.equals("Vanilla")) unblock();
+            return;
+        }
+
         float[] rotations = RotationUtils.getRotations(target);
         RotationUtils.applyRotations(rotations[0], rotations[1]);
+
         long currentTime = System.currentTimeMillis();
+
         if (blockMode.equals("Legit")) {
-            if (currentTime - lastBlockToggle >= 50 * blockSpeed) { if (blocking) { startBlock(); lastBlockToggle = currentTime; } }
-            if (blocking && currentTime - lastAttackTime >= 50 * attackSpeed) { attack(target); lastAttackTime = currentTime; }
-            if (blocking && currentTime - lastBlockToggle >= 50 * blockSpeed) { unblock(); lastBlockToggle = currentTime; }
+            if (currentTime - lastBlockToggle >= 50 * blockSpeed) {
+                if (!blocking) {
+                    startBlock();
+                    lastBlockToggle = currentTime;
+                }
+            }
+            if (!blocking && currentTime - lastAttackTime >= 50 * attackSpeed) {
+                attack(target);
+                lastAttackTime = currentTime;
+            }
+            if (blocking && currentTime - lastBlockToggle >= 50 * blockSpeed) {
+                unblock();
+                lastBlockToggle = currentTime;
+            }
         } else if (blockMode.equals("Packet")) {
-            if (currentTime - lastBlockToggle >= 50 * blockSpeed) { sendBlockPacket(); lastBlockToggle = currentTime; }
-            if (currentTime - lastAttackTime >= 50 * attackSpeed) { attack(target); lastAttackTime = currentTime; }
+            if (currentTime - lastBlockToggle >= 50 * blockSpeed) {
+                sendBlockPacket();
+                lastBlockToggle = currentTime;
+            }
+            if (currentTime - lastAttackTime >= 50 * attackSpeed) {
+                attack(target);
+                lastAttackTime = currentTime;
+            }
         } else if (blockMode.equals("Vanilla")) {
             startBlock();
-            if (currentTime - lastAttackTime >= 50 * attackSpeed) { attack(target); lastAttackTime = currentTime; }
+            if (currentTime - lastAttackTime >= 50 * attackSpeed) {
+                attack(target);
+                lastAttackTime = currentTime;
+            }
         } else {
-            if (currentTime - lastAttackTime >= 50 * attackSpeed) { attack(target); lastAttackTime = currentTime; }
+            if (currentTime - lastAttackTime >= 50 * attackSpeed) {
+                attack(target);
+                lastAttackTime = currentTime;
+            }
         }
     }
 
@@ -64,14 +95,14 @@ public class KillAura extends Module {
     }
 
     private void startBlock() {
-        if (= null && mc.thePlayer.getHeldItem().getItem() instanceof ItemSword) {
+        if (!blocking && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemSword) {
             mc.getNetHandler().addToSendQueue(new C08PacketPlayerBlockPlacement(mc.thePlayer.getHeldItem()));
             blocking = true;
         }
     }
 
     private void sendBlockPacket() {
-        if (mc.thePlayer.getHeldItem() = null && mc.thePlayer.getHeldItem().getItem() instanceof ItemSword) {
+        if (mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemSword) {
             mc.getNetHandler().addToSendQueue(new C08PacketPlayerBlockPlacement(mc.thePlayer.getHeldItem()));
         }
     }
@@ -84,5 +115,8 @@ public class KillAura extends Module {
     }
 
     @Override
-    public void onDisable() { unblock(); target = null; }
+    public void onDisable() {
+        unblock();
+        target = null;
+    }
 }

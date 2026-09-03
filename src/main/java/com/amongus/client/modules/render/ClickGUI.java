@@ -32,7 +32,7 @@ public class ClickGUI extends Module {
 
     public class AugustusGuiScreen extends GuiScreen {
         private List<Panel> panels = new ArrayList<>();
-        private Panel draggingPanel;
+        private Panel draggingPanel = null;
         private int dragOffsetX, dragOffsetY;
 
         public AugustusGuiScreen() {
@@ -71,7 +71,7 @@ public class ClickGUI extends Module {
             GlStateManager.enableAlpha();
             GlStateManager.disableBlend();
             GlStateManager.popMatrix();
-            if (draggingPanel = null) {
+            if (draggingPanel != null) {
                 draggingPanel.x = mouseX - dragOffsetX;
                 draggingPanel.y = mouseY - dragOffsetY;
             }
@@ -125,12 +125,12 @@ public class ClickGUI extends Module {
 
         public void draw(int mouseX, int mouseY) {
             int th = headerHeight + (modules.size() * moduleHeight);
-            drawRect(x, y, x + width, y + th, AUGUSTUS_BG.getRGB());
-            drawRect(x, y, x + width, y + headerHeight, AUGUSTUS_HEADER.getRGB());
-            drawRect(x, y, x + width, y + 1, AUGUSTUS_OUTLINE.getRGB());
-            drawRect(x, y + th - 1, x + width, y + th, AUGUSTUS_OUTLINE.getRGB());
-            drawRect(x, y, x + 1, y + th, AUGUSTUS_OUTLINE.getRGB());
-            drawRect(x + width - 1, y, x + width, y + th, AUGUSTUS_OUTLINE.getRGB());
+            GuiScreen.drawRect(x, y, x + width, y + th, AUGUSTUS_BG.getRGB());
+            GuiScreen.drawRect(x, y, x + width, y + headerHeight, AUGUSTUS_HEADER.getRGB());
+            GuiScreen.drawRect(x, y, x + width, y + 1, AUGUSTUS_OUTLINE.getRGB());
+            GuiScreen.drawRect(x, y + th - 1, x + width, y + th, AUGUSTUS_OUTLINE.getRGB());
+            GuiScreen.drawRect(x, y, x + 1, y + th, AUGUSTUS_OUTLINE.getRGB());
+            GuiScreen.drawRect(x + width - 1, y, x + width, y + th, AUGUSTUS_OUTLINE.getRGB());
             String ht = title.toUpperCase();
             int tw = mc.fontRendererObj.getStringWidth(ht);
             mc.fontRendererObj.drawStringWithShadow(ht, x + (width - tw) / 2, y + (headerHeight - 8) / 2, new Color(255, 255, 255, 255).getRGB());
@@ -140,18 +140,18 @@ public class ClickGUI extends Module {
             for (Module m : modules) {
                 int my = y + headerHeight + (modules.indexOf(m) * moduleHeight);
                 if (mouseX >= x && mouseX <= x + width && mouseY >= my && mouseY <= my + moduleHeight) {
-                    drawRect(x, my, x + width, my + moduleHeight, new Color(50, 50, 50, 180).getRGB());
+                    GuiScreen.drawRect(x, my, x + width, my + moduleHeight, new Color(50, 50, 50, 180).getRGB());
                     hovered = m;
                 }
                 Color mc2 = m.isEnabled() ? AUGUSTUS_ENABLED : AUGUSTUS_DISABLED;
                 mc.fontRendererObj.drawStringWithShadow(m.getName(), x + 6, my + 4, mc2.getRGB());
-                if (m.getKey() = Keyboard.KEY_NONE) {
+                if (m.getKey() != Keyboard.KEY_NONE) {
                     String kn = Keyboard.getKeyName(m.getKey());
                     int kw = mc.fontRendererObj.getStringWidth(kn);
                     mc.fontRendererObj.drawStringWithShadow(kn, x + width - kw - 6, my + 4, new Color(120, 120, 120, 255).getRGB());
                 }
             }
-            if (hovered = null) drawTooltip(hovered, mouseX, mouseY);
+            if (hovered != null) drawTooltip(hovered, mouseX, mouseY);
         }
 
         private void drawTooltip(Module m, int mouseX, int mouseY) {
@@ -166,7 +166,7 @@ public class ClickGUI extends Module {
                     current = word + " ";
                 }
             }
-            if (current.trim().isEmpty()) lines.add(current.trim());
+            if (!current.trim().isEmpty()) lines.add(current.trim());
             int tw = 0;
             for (String line : lines) tw = Math.max(tw, mc.fontRendererObj.getStringWidth(line));
             tw += 12;
@@ -175,7 +175,7 @@ public class ClickGUI extends Module {
             int ty = mouseY + 10;
             if (tx + tw > mc.displayWidth / 2) tx = mouseX - tw - 10;
             if (ty + th > mc.displayHeight / 2) ty = mouseY - th - 10;
-            drawRect(tx, ty, tx + tw, ty + th, TOOLTIP_BG.getRGB());
+            GuiScreen.drawRect(tx, ty, tx + tw, ty + th, TOOLTIP_BG.getRGB());
             for (int i = 0; i < lines.size(); i++) {
                 mc.fontRendererObj.drawStringWithShadow(lines.get(i), tx + 6, ty + 4 + i * 10, TOOLTIP_TEXT.getRGB());
             }

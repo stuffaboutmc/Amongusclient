@@ -3,6 +3,7 @@ import com.amongus.client.modules.Module;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.input.Keyboard;
+import java.lang.reflect.Field;
 public class FastUse extends Module {
     public FastUse() {
         super("FastUse", Keyboard.KEY_NONE, Category.PLAYER, "Use items faster.");
@@ -13,7 +14,11 @@ public class FastUse extends Module {
         if (event.entity != mc.thePlayer) return;
         if (getSetting("Mode").getValue().equals("None")) return;
         if (mc.thePlayer.isUsingItem()) {
-            mc.thePlayer.itemInUseCount = Math.min(mc.thePlayer.itemInUseCount, 5);
+            try {
+                Field f = net.minecraft.entity.player.EntityPlayer.class.getDeclaredField("itemInUseCount");
+                f.setAccessible(true);
+                f.setInt(mc.thePlayer, Math.min((int)f.getInt(mc.thePlayer), 5));
+            } catch (Exception e) {}
         }
     }
 }

@@ -27,21 +27,30 @@ public class Scaffold extends Module {
 
     @SubscribeEvent
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
-        if (event.entity = mc.thePlayer) return;
+        if (event.entity != mc.thePlayer) return;
         String mode = getSetting("Mode").getValue();
         if (mode.equals("None")) return;
+
         RotationUtils.rotationMode = getSetting("Rotation").getValue();
         RotationUtils.silentRotations = getSetting("Silent").getValue().equals("On");
+
         BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
+
         if (mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
             if (mode.equals("Godbridge")) {
                 blocksSinceJump++;
-                if (blocksSinceJump >= 9) { mc.thePlayer.jump(); blocksSinceJump = 0; return; }
+                if (blocksSinceJump >= 9) {
+                    mc.thePlayer.jump();
+                    blocksSinceJump = 0;
+                    return;
+                }
             }
+
             float[] rot = RotationUtils.getRotations(new Vec3(below.getX() + 0.5, below.getY() + 0.5, below.getZ() + 0.5));
             RotationUtils.applyRotations(rot[0], rot[1]);
             placeBlock(below);
         }
+
         if (getSetting("MoveFix").getDoubleValue() > 50) {
             mc.thePlayer.motionX *= 0.95;
             mc.thePlayer.motionZ *= 0.95;
@@ -50,8 +59,8 @@ public class Scaffold extends Module {
 
     private void placeBlock(BlockPos pos) {
         ItemStack held = mc.thePlayer.getHeldItem();
-        if (held == null || (held.getItem() instanceof ItemBlock)) return;
-        Block block = ^(ItemBlock) held.getItem()).getBlock();
+        if (held == null || !(held.getItem() instanceof ItemBlock)) return;
+        Block block = ((ItemBlock) held.getItem()).getBlock();
         if (block == Blocks.air) return;
         mc.playerController.onPlayerRightClick(mc.thePlayer, mc.theWorld, held, pos, EnumFacing.UP, new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
         mc.thePlayer.swingItem();

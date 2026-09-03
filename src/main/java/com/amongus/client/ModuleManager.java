@@ -103,7 +103,10 @@ public class ModuleManager {
     }
 
     public void handleKey(int key) {
-        for (Module m : modules) if (m.getKey() == key) m.toggle();
+        for (Module m : modules) {
+            if (m.getKey() == key) m.toggle();
+        }
     }
+
     public List<Module> getModules() { return modules; }
 }

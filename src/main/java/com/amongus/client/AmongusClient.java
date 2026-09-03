@@ -4,7 +4,6 @@ import com.amongus.client.utils.ConfigManager;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
@@ -23,7 +22,7 @@ public class AmongusClient {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(moduleManager);
         MinecraftForge.EVENT_BUS.register(commandManager);
-        ConfigManager.loadConfig(); // auto-load
+        ConfigManager.loadConfig();
         System.out.println("[Amongus] Initialized");
     }
 

@@ -7,7 +7,7 @@ public class AutoLogin extends Module {
     public AutoLogin() {
         super("AutoLogin", Keyboard.KEY_NONE, Category.MISC, "Logs in automatically.");
         addSetting(new Setting("Mode", new String[]{"None","Basic","Advanced"}, "Basic"));
-        addSetting(new Setting("Password", "password"));
+        addSetting(new Setting("Password", new String[]{"password","changeme","12345"}, "password"));
     }
     @SubscribeEvent
     public void onChat(ClientChatReceivedEvent event) {

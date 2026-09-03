@@ -13,12 +13,8 @@ public class BunnyHop extends Module {
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
         if (event.entity != mc.thePlayer) return;
         if (getSetting("Mode").getValue().equals("None")) return;
-        if (mc.thePlayer.onGround && mc.thePlayer.isMoving()) {
+        if (mc.thePlayer.onGround && (mc.thePlayer.moveForward != 0 || mc.thePlayer.moveStrafing != 0)) {
             mc.thePlayer.jump();
-            double yaw = Math.toRadians(mc.thePlayer.rotationYaw);
-            double boost = getSetting("Boost").getDoubleValue() * 0.1;
-            mc.thePlayer.motionX += -Math.sin(yaw) * boost;
-            mc.thePlayer.motionZ += Math.cos(yaw) * boost;
         }
     }
 }

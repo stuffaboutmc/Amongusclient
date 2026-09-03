@@ -15,15 +15,12 @@ public class AimAssist extends Module {
     @SubscribeEvent
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
         if (event.entity != mc.thePlayer) return;
-        String mode = getSetting("Mode").getValue();
-        if (mode.equals("None")) return;
+        if (getSetting("Mode").getValue().equals("None")) return;
         EntityLivingBase target = RotationUtils.raycastEntity(getSetting("Range").getDoubleValue());
         if (target == null) return;
-        float strength = getSetting("Strength").getDoubleValue() / 100.0F;
+        float strength = (float) getSetting("Strength").getDoubleValue() / 100.0F;
         float[] rot = RotationUtils.getRotations(target);
-        float currentYaw = mc.thePlayer.rotationYaw;
-        float currentPitch = mc.thePlayer.rotationPitch;
-        mc.thePlayer.rotationYaw = currentYaw + (rot[0] - currentYaw) * strength;
-        mc.thePlayer.rotationPitch = currentPitch + (rot[1] - currentPitch) * strength;
+        mc.thePlayer.rotationYaw += (rot[0] - mc.thePlayer.rotationYaw) * strength;
+        mc.thePlayer.rotationPitch += (rot[1] - mc.thePlayer.rotationPitch) * strength;
     }
 }

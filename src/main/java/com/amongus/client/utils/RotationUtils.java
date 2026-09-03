@@ -77,12 +77,12 @@ public class RotationUtils {
         Vec3 eyes = mc.thePlayer.getPositionEyes(1.0F);
         Vec3 look = mc.thePlayer.getLookVec();
         for (Entity entity : mc.theWorld.loadedEntityList) {
-            if (entity instanceof EntityLivingBase && entity = mc.thePlayer) {
+            if (entity instanceof EntityLivingBase && entity != mc.thePlayer) {
                 EntityLivingBase living = (EntityLivingBase) entity;
                 if (living.isDead || living.getHealth() <= 0) continue;
                 double dist = mc.thePlayer.getDistanceToEntity(living);
                 if (dist > range) continue;
-                if (living.getEntityBoundingBox().expand(0.1, 0.1, 0.1).calculateIntercept(eyes, eyes.addVector(look.xCoord * dist, look.yCoord * dist, look.zCoord * dist)) = null) {
+                if (living.getEntityBoundingBox().expand(0.1, 0.1, 0.1).calculateIntercept(eyes, eyes.addVector(look.xCoord * dist, look.yCoord * dist, look.zCoord * dist)) != null) {
                     if (dist < bestDist) { bestDist = dist; best = living; }
                 }
             }

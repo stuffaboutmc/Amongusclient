@@ -7,7 +7,7 @@ public class NameProtect extends Module {
     public NameProtect() {
         super("NameProtect", Keyboard.KEY_NONE, Category.MISC, "Hides your name in chat.");
         addSetting(new Setting("Mode", new String[]{"None","Basic","Advanced"}, "Basic"));
-        addSetting(new Setting("Name", "Player"));
+        addSetting(new Setting("Name", new String[]{"Player","User","Hidden"}, "Player"));
     }
     @SubscribeEvent
     public void onChat(ClientChatReceivedEvent event) {

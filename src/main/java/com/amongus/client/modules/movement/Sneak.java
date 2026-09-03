@@ -7,6 +7,7 @@ import org.lwjgl.input.Keyboard;
 
 public class Sneak extends Module {
     private int tickCounter = 0;
+
     public Sneak() {
         super("Sneak", Keyboard.KEY_NONE, Category.MOVEMENT, "Sneaks every X ticks.");
         addSetting(new Setting("Enabled", new String[]{"Off", "On"}, "Off"));
@@ -15,10 +16,13 @@ public class Sneak extends Module {
 
     @SubscribeEvent
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
-        if (event.entity = mc.thePlayer) return;
+        if (event.entity != mc.thePlayer) return;
         if (getSetting("Enabled").getValue().equals("Off")) return;
         tickCounter++;
         int interval = (int) getSetting("Interval").getDoubleValue();
-        if (tickCounter >= interval) { mc.thePlayer.setSneaking(mc.thePlayer.isSneaking()); tickCounter = 0; }
+        if (tickCounter >= interval) {
+            mc.thePlayer.setSneaking(!mc.thePlayer.isSneaking());
+            tickCounter = 0;
+        }
     }
 }

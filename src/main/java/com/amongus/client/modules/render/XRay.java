@@ -9,7 +9,6 @@ public class XRay extends Module {
     private float oldGamma;
     private boolean oldAmbientOcclusion;
     private int oldFog;
-    private float oldFogDensity;
 
     public XRay() {
         super("XRay", Keyboard.KEY_NONE, Category.RENDER, "Highlights ores with extreme brightness and no fog.");
@@ -24,7 +23,6 @@ public class XRay extends Module {
         oldGamma = mc.gameSettings.gammaSetting;
         oldAmbientOcclusion = mc.gameSettings.ambientOcclusion != 0;
         oldFog = mc.gameSettings.renderDistanceChunks;
-        oldFogDensity = mc.gameSettings.fogDensity;
 
         applySettings();
         mc.renderGlobal.loadRenderers();
@@ -35,7 +33,6 @@ public class XRay extends Module {
         mc.gameSettings.gammaSetting = oldGamma;
         mc.gameSettings.ambientOcclusion = oldAmbientOcclusion ? 1 : 0;
         mc.gameSettings.renderDistanceChunks = oldFog;
-        mc.gameSettings.fogDensity = oldFogDensity;
         mc.renderGlobal.loadRenderers();
     }
 
@@ -49,7 +46,6 @@ public class XRay extends Module {
         mc.gameSettings.gammaSetting = (float) getSetting("Gamma").getDoubleValue();
         if (getSetting("DisableFog").getValue().equals("On")) {
             mc.gameSettings.renderDistanceChunks = 32;
-            mc.gameSettings.fogDensity = 0.0F;
         }
         mc.gameSettings.ambientOcclusion = getSetting("AmbientOcclusion").getValue().equals("On") ? 0 : 1;
     }

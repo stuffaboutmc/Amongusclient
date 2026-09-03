@@ -46,6 +46,7 @@ public class KillAura extends Module {
         addSetting(new Setting("Target", new String[]{"Players","Mobs","Animals","Invisible"}, "Players"));
         addSetting(new Setting("Invisibles", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("ThroughWalls", new String[]{"Off","On"}, "Off"));
+        addSetting(new Setting("Raycast", new String[]{"None","Basic","Legit","Advanced","Instant"}, "Basic"));
         addSetting(new Setting("SwordOnly", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("Criticals", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("FOV", 30, 360, 180, 10));
@@ -192,17 +193,15 @@ public class KillAura extends Module {
         for (EntityLivingBase entity : mc.theWorld.playerEntities) {
             if (entity == mc.thePlayer || entity.isDead || entity.getHealth() <= 0) continue;
 
-            // Target type filtering
             if (targetType.equals("Players") && !(entity instanceof EntityPlayer)) continue;
             if (targetType.equals("Mobs") && !(entity instanceof EntityMob)) continue;
             if (targetType.equals("Animals") && !(entity instanceof EntityAnimal)) continue;
             if (targetType.equals("Invisible") && !entity.isInvisible()) continue;
-
-            // Invisibles setting only applies when not targeting invisible specifically
             if (!targetType.equals("Invisible") &&
                 getSetting("Invisibles").getValue().equals("Off") && entity.isInvisible()) continue;
 
             if (isBot(entity)) continue;
+
             if (getSetting("ThroughWalls").getValue().equals("Off") && !mc.thePlayer.canEntityBeSeen(entity)) continue;
             if (!isInFOV(entity, fov)) continue;
 

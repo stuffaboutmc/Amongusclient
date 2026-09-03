@@ -15,18 +15,30 @@ public class Module {
     private List<Setting> settings = new ArrayList<>();
 
     public Module(String name, int key, Category category) {
-        this.name = name; this.key = key; this.category = category; this.description = "No description.";
+        this.name = name;
+        this.key = key;
+        this.category = category;
+        this.description = "No description.";
     }
 
     public Module(String name, int key, Category category, String description) {
-        this.name = name; this.key = key; this.category = category; this.description = description;
+        this.name = name;
+        this.key = key;
+        this.category = category;
+        this.description = description;
     }
 
     public void toggle() {
-        enabled = enabled;
-        if (enabled) { onEnable(); MinecraftForge.EVENT_BUS.register(this); }
-        else { onDisable(); MinecraftForge.EVENT_BUS.unregister(this); }
+        enabled = !enabled;
+        if (enabled) {
+            onEnable();
+            MinecraftForge.EVENT_BUS.register(this);
+        } else {
+            onDisable();
+            MinecraftForge.EVENT_BUS.unregister(this);
+        }
     }
+
     public void onEnable() {}
     public void onDisable() {}
     public String getName() { return name; }
@@ -39,7 +51,9 @@ public class Module {
     public void addSetting(Setting setting) { settings.add(setting); }
 
     public Setting getSetting(String name) {
-        for (Setting s : settings) if (s.getName().equalsIgnoreCase(name)) return s;
+        for (Setting s : settings) {
+            if (s.getName().equalsIgnoreCase(name)) return s;
+        }
         return null;
     }
 
@@ -53,12 +67,19 @@ public class Module {
         private double min, max, increment;
 
         public Setting(String name, String[] options, String defaultValue) {
-            this.name = name; this.options = options; this.value = defaultValue; this.isSlider = false;
+            this.name = name;
+            this.options = options;
+            this.value = defaultValue;
+            this.isSlider = false;
         }
 
         public Setting(String name, double min, double max, double defaultValue, double increment) {
-            this.name = name; this.min = min; this.max = max; this.increment = increment;
-            this.value = String.valueOf(defaultValue); this.isSlider = true;
+            this.name = name;
+            this.min = min;
+            this.max = max;
+            this.increment = increment;
+            this.value = String.valueOf(defaultValue);
+            this.isSlider = true;
         }
 
         public String getName() { return name; }
@@ -70,10 +91,13 @@ public class Module {
         public double getMax() { return max; }
         public double getIncrement() { return increment; }
         public double getDoubleValue() { return Double.parseDouble(value); }
+
         public void cycle() {
             if (options == null) return;
             int current = -1;
-            for (int i = 0; i < options.length; i++) if (options[i].equals(value)) current = i;
+            for (int i = 0; i < options.length; i++) {
+                if (options[i].equals(value)) current = i;
+            }
             current++;
             if (current >= options.length) current = 0;
             value = options[current];

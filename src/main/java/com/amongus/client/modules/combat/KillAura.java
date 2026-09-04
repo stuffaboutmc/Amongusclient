@@ -3,7 +3,6 @@ package com.amongus.client.modules.combat;
 import com.amongus.client.AmongusClient;
 import com.amongus.client.modules.Module;
 import com.amongus.client.utils.RotationUtils;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.entity.passive.EntityAnimal;
@@ -15,6 +14,7 @@ import net.minecraft.network.play.client.C07PacketPlayerDigging;
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -38,7 +38,7 @@ public class KillAura extends Module {
     public KillAura() {
         super("KillAura", Keyboard.KEY_R, Category.COMBAT, "Attacks entities with extreme customization.");
         addSetting(new Setting("Rotation", new String[]{"Legit","Custom","Snap","Smooth","Instant"}, "Legit"));
-        addSetting(new Setting("Silent", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("Silent", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("AutoBlock", new String[]{"None","Legit","Packet","Vanilla"}, "None"));
         addSetting(new Setting("BlockSpeed", 1, 20, 10, 1));
         addSetting(new Setting("AttackSpeed", 1, 20, 10, 1));
@@ -57,8 +57,9 @@ public class KillAura extends Module {
         addSetting(new Setting("SwitchDelay", 0, 1000, 200, 50));
         addSetting(new Setting("IgnoreTeammates", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("MaxTargets", 1, 10, 1, 1));
+        addSetting(new Setting("MoveFix", new String[]{"None","Silent","Strict"}, "Silent"));
 
-        addSetting(new Setting("AntiBot", new String[]{"Off","Advanced","Custom"}, "Advanced"));
+        addSetting(new Setting("AntiBot", new String[]{"Off","Advanced","Custom"}, "Off"));
         addSetting(new Setting("CheckTab", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("CheckName", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("CheckPing", new String[]{"Off","On"}, "Off"));
@@ -95,6 +96,7 @@ public class KillAura extends Module {
 
         if (target == null) {
             if (!blockMode.equals("Vanilla")) unblock();
+            applyMoveFix(false);
             return;
         }
 
@@ -142,7 +144,30 @@ public class KillAura extends Module {
             }
         }
 
+        applyMoveFix(true);
         updateTracking();
+    }
+
+    private void applyMoveFix(boolean hasTarget) {
+        String moveFix = getSetting("MoveFix").getValue();
+        if (moveFix.equals("None")) return;
+        if (moveFix.equals("Silent")) {
+            boolean canSprint = mc.thePlayer.moveForward > 0 &&
+                                !mc.thePlayer.isSneaking() &&
+                                !mc.thePlayer.isCollidedHorizontally &&
+                                !hasTarget;
+            mc.thePlayer.setSprinting(canSprint);
+            if (hasTarget) {
+                mc.thePlayer.motionX *= 0.8;
+                mc.thePlayer.motionZ *= 0.8;
+            }
+        } else if (moveFix.equals("Strict")) {
+            mc.thePlayer.setSprinting(false);
+            if (hasTarget) {
+                mc.thePlayer.motionX *= 0.5;
+                mc.thePlayer.motionZ *= 0.5;
+            }
+        }
     }
 
     private void updateTracking() {
@@ -190,6 +215,7 @@ public class KillAura extends Module {
         double fov = getSetting("FOV").getDoubleValue();
         int maxTargets = (int) getSetting("MaxTargets").getDoubleValue();
         int count = 0;
+        String raycast = getSetting("Raycast").getValue();
 
         for (Object obj : mc.theWorld.loadedEntityList) {
             if (!(obj instanceof EntityLivingBase)) continue;
@@ -208,11 +234,13 @@ public class KillAura extends Module {
 
             if (isBot(entity)) continue;
 
-            if (getSetting("ThroughWalls").getValue().equals("Off") && !mc.thePlayer.canEntityBeSeen(entity)) continue;
-            if (!isInFOV(entity, fov)) continue;
+            // Raycast logic
+            if (!isTargetReachable(entity, raycast)) continue;
 
             double dist = mc.thePlayer.getDistanceToEntity(entity);
             if (dist > range) continue;
+
+            if (!isInFOV(entity, fov)) continue;
 
             if (getSetting("IgnoreTeammates").getValue().equals("On") && entity instanceof EntityPlayer) {
                 EntityPlayer player = (EntityPlayer) entity;
@@ -239,6 +267,41 @@ public class KillAura extends Module {
             }
         }
         return best;
+    }
+
+    private boolean isTargetReachable(EntityLivingBase entity, String raycastMode) {
+        switch (raycastMode) {
+            case "None":
+                return true;
+            case "Instant":
+                return true;
+            case "Basic":
+                // Basic line of sight
+                return getSetting("ThroughWalls").getValue().equals("On") || mc.thePlayer.canEntityBeSeen(entity);
+            case "Legit":
+                // Legit: line of sight + within player reach (3 blocks)
+                if (getSetting("ThroughWalls").getValue().equals("Off") && !mc.thePlayer.canEntityBeSeen(entity)) {
+                    return false;
+                }
+                return mc.thePlayer.getDistanceToEntity(entity) <= 3.0;
+            case "Advanced":
+                // Advanced: ray trace from player's eyes to entity's bounding box
+                if (getSetting("ThroughWalls").getValue().equals("Off")) {
+                    Vec3 eyes = mc.thePlayer.getPositionEyes(1.0F);
+                    Vec3 look = mc.thePlayer.getLookVec();
+                    double dist = mc.thePlayer.getDistanceToEntity(entity);
+                    MovingObjectPosition mop = mc.theWorld.rayTraceBlocks(eyes, eyes.addVector(look.xCoord * dist, look.yCoord * dist, look.zCoord * dist), false, true, false);
+                    if (mop != null && mop.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK) {
+                        // Block in the way
+                        return false;
+                    }
+                    // No block, but also check entity ray
+                    return entity.getEntityBoundingBox().calculateIntercept(eyes, eyes.addVector(look.xCoord * dist, look.yCoord * dist, look.zCoord * dist)) != null;
+                }
+                return true;
+            default:
+                return true;
+        }
     }
 
     private boolean isBot(EntityLivingBase entity) {

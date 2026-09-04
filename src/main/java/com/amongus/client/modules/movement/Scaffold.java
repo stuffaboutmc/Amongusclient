@@ -103,8 +103,10 @@ public class Scaffold extends Module {
             }
         }
 
+        boolean needsPlacement = mc.theWorld.getBlockState(below).getBlock() == Blocks.air;
+
         // Place block if air
-        if (mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
+        if (needsPlacement) {
             if (mode.equals("Godbridge")) {
                 blocksSinceJump++;
                 if (blocksSinceJump >= 9) {
@@ -139,25 +141,27 @@ public class Scaffold extends Module {
             }
         }
 
-        // MoveFix - more natural
+        // MoveFix - only sprint when legitimately possible
         String moveFix = getSetting("MoveFix").getValue();
         if (moveFix.equals("Silent")) {
-            // Recreate real player movement: preserve forward momentum, reduce strafing
-            float forward = mc.thePlayer.moveForward;
-            float strafe = mc.thePlayer.moveStrafing;
-            double yaw = Math.toRadians(mc.thePlayer.rotationYaw);
-            double forwardX = -Math.sin(yaw) * forward;
-            double forwardZ = Math.cos(yaw) * forward;
-            double strafeX = Math.cos(yaw) * strafe;
-            double strafeZ = Math.sin(yaw) * strafe;
-            double speed = 0.15; // normal walking speed factor
-            mc.thePlayer.motionX = forwardX * speed + strafeX * speed * 0.5;
-            mc.thePlayer.motionZ = forwardZ * speed + strafeZ * speed * 0.5;
+            // Allow sprint only if real player could: moving forward, not sneaking, not collided, and not actively bridging
+            boolean canSprint = mc.thePlayer.moveForward > 0 &&
+                                !mc.thePlayer.isSneaking() &&
+                                !mc.thePlayer.isCollidedHorizontally &&
+                                !needsPlacement;
+            mc.thePlayer.setSprinting(canSprint);
+            if (needsPlacement) {
+                // While bridging, use normal walking speed
+                mc.thePlayer.motionX *= 0.6;
+                mc.thePlayer.motionZ *= 0.6;
+            }
         } else if (moveFix.equals("Strict")) {
-            // Almost stop all motion for careful bridging
-            mc.thePlayer.motionX *= 0.1;
-            mc.thePlayer.motionZ *= 0.1;
+            // Never sprint while scaffold is active
             mc.thePlayer.setSprinting(false);
+            if (needsPlacement) {
+                mc.thePlayer.motionX *= 0.3;
+                mc.thePlayer.motionZ *= 0.3;
+            }
         }
         // None: no adjustments
     }

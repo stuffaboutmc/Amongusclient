@@ -7,6 +7,7 @@ import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -41,7 +42,6 @@ public class Scaffold extends Module {
         String mode = getSetting("Mode").getValue();
         if (mode.equals("None")) return;
 
-        // KeepY initialization
         if (getSetting("KeepY").getValue().equals("On")) {
             if (!keepYInitialized) {
                 keepYLevel = Math.floor(mc.thePlayer.posY);
@@ -51,7 +51,6 @@ public class Scaffold extends Module {
             keepYInitialized = false;
         }
 
-        // AutoJump handling with KeepY conflict
         if (getSetting("AutoJump").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && !mc.thePlayer.isSneaking()) {
                 if (getSetting("KeepY").getValue().equals("On")) {
@@ -62,7 +61,6 @@ public class Scaffold extends Module {
             }
         }
 
-        // KeepY: enforce exact Y level
         if (getSetting("KeepY").getValue().equals("On")) {
             double currentY = mc.thePlayer.posY;
             if (currentY > keepYLevel) {
@@ -75,7 +73,6 @@ public class Scaffold extends Module {
             }
         }
 
-        // Determine block position
         BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
 
         if (mode.equals("Telly")) {
@@ -95,7 +92,6 @@ public class Scaffold extends Module {
             }
         }
 
-        // SafeWalk
         if (getSetting("SafeWalk").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
                 mc.thePlayer.motionX *= 0.5;
@@ -105,33 +101,34 @@ public class Scaffold extends Module {
 
         boolean needsPlacement = mc.theWorld.getBlockState(below).getBlock() == Blocks.air;
 
-        // Place block if air
         if (needsPlacement) {
-            if (mode.equals("Godbridge")) {
-                blocksSinceJump++;
-                if (blocksSinceJump >= 9) {
-                    mc.thePlayer.jump();
-                    blocksSinceJump = 0;
-                    return;
+            // Raycast check before placing
+            if (isPlacementReachable(below, getSetting("Raycast").getValue())) {
+                if (mode.equals("Godbridge")) {
+                    blocksSinceJump++;
+                    if (blocksSinceJump >= 9) {
+                        mc.thePlayer.jump();
+                        blocksSinceJump = 0;
+                        return;
+                    }
                 }
-            }
 
-            if (mode.equals("Tower") && getSetting("Tower").getValue().equals("On") && mode.equals("Normal")) {
-                mc.thePlayer.motionY = 0.42;
-                mc.thePlayer.motionX = 0;
-                mc.thePlayer.motionZ = 0;
-            }
+                if (mode.equals("Tower") && getSetting("Tower").getValue().equals("On") && mode.equals("Normal")) {
+                    mc.thePlayer.motionY = 0.42;
+                    mc.thePlayer.motionX = 0;
+                    mc.thePlayer.motionZ = 0;
+                }
 
-            // Rotate toward block (visible)
-            if (getSetting("Rotate").getValue().equals("On")) {
-                rotateToBlock(below);
-            }
+                if (getSetting("Rotate").getValue().equals("On")) {
+                    rotateToBlock(below);
+                }
 
-            long placeDelay = (long) getSetting("PlaceDelay").getDoubleValue();
-            if (System.currentTimeMillis() - lastPlaceTime >= placeDelay) {
-                boolean placed = tryPlaceBlock(below);
-                if (placed) {
-                    lastPlaceTime = System.currentTimeMillis();
+                long placeDelay = (long) getSetting("PlaceDelay").getDoubleValue();
+                if (System.currentTimeMillis() - lastPlaceTime >= placeDelay) {
+                    boolean placed = tryPlaceBlock(below);
+                    if (placed) {
+                        lastPlaceTime = System.currentTimeMillis();
+                    }
                 }
             }
         } else {
@@ -141,29 +138,55 @@ public class Scaffold extends Module {
             }
         }
 
-        // MoveFix - only sprint when legitimately possible
+        // MoveFix
         String moveFix = getSetting("MoveFix").getValue();
         if (moveFix.equals("Silent")) {
-            // Allow sprint only if real player could: moving forward, not sneaking, not collided, and not actively bridging
             boolean canSprint = mc.thePlayer.moveForward > 0 &&
                                 !mc.thePlayer.isSneaking() &&
                                 !mc.thePlayer.isCollidedHorizontally &&
                                 !needsPlacement;
             mc.thePlayer.setSprinting(canSprint);
             if (needsPlacement) {
-                // While bridging, use normal walking speed
                 mc.thePlayer.motionX *= 0.6;
                 mc.thePlayer.motionZ *= 0.6;
             }
         } else if (moveFix.equals("Strict")) {
-            // Never sprint while scaffold is active
             mc.thePlayer.setSprinting(false);
             if (needsPlacement) {
                 mc.thePlayer.motionX *= 0.3;
                 mc.thePlayer.motionZ *= 0.3;
             }
         }
-        // None: no adjustments
+    }
+
+    private boolean isPlacementReachable(BlockPos pos, String raycastMode) {
+        switch (raycastMode) {
+            case "None":
+                return true;
+            case "Instant":
+                return true;
+            case "Basic":
+                // Check within reach distance (4.5 blocks)
+                double dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                return dist <= 4.5;
+            case "Legit":
+                // Check distance and line of sight
+                dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                if (dist > 4.5) return false;
+                Vec3 eyes = mc.thePlayer.getPositionEyes(1.0F);
+                Vec3 targetVec = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                return mc.theWorld.rayTraceBlocks(eyes, targetVec, false, true, false) == null;
+            case "Advanced":
+                // Ray trace to block side, require hitting the block
+                dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                if (dist > 4.5) return false;
+                Vec3 eyePos = mc.thePlayer.getPositionEyes(1.0F);
+                Vec3 blockVec = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                MovingObjectPosition mop = mc.theWorld.rayTraceBlocks(eyePos, blockVec, false, true, false);
+                return mop != null && mop.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK;
+            default:
+                return true;
+        }
     }
 
     private void rotateToBlock(BlockPos pos) {

@@ -7,7 +7,6 @@ import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
-import net.minecraft.util.MathHelper;
 import net.minecraft.util.Vec3;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -24,6 +23,7 @@ public class Scaffold extends Module {
         super("Scaffold", Keyboard.KEY_NONE, Category.MOVEMENT, "Places blocks under you with advanced controls.");
         addSetting(new Setting("Mode", new String[]{"None","Telly","Normal","Godbridge","Snap"}, "Normal"));
         addSetting(new Setting("Rotate", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("MoveFix", new String[]{"None","Silent","Strict"}, "Silent"));
         addSetting(new Setting("Tower", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("PlaceDelay", 0, 500, 0, 10));
         addSetting(new Setting("AutoJump", new String[]{"Off","On"}, "Off"));
@@ -31,8 +31,8 @@ public class Scaffold extends Module {
         addSetting(new Setting("AutoSwitch", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("SafeWalk", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("Raycast", new String[]{"None","Basic","Legit","Advanced","Instant"}, "Basic"));
-        addSetting(new Setting("TellyForward", 1, 5, 2, 1));   // blocks forward
-        addSetting(new Setting("TellyBackward", 1, 5, 2, 1)); // blocks backward
+        addSetting(new Setting("TellyForward", 1, 5, 2, 1));
+        addSetting(new Setting("TellyBackward", 1, 5, 2, 1));
     }
 
     @SubscribeEvent
@@ -41,7 +41,7 @@ public class Scaffold extends Module {
         String mode = getSetting("Mode").getValue();
         if (mode.equals("None")) return;
 
-        // Initialize KeepY baseline
+        // KeepY initialization
         if (getSetting("KeepY").getValue().equals("On")) {
             if (!keepYInitialized) {
                 keepYLevel = Math.floor(mc.thePlayer.posY);
@@ -51,11 +51,10 @@ public class Scaffold extends Module {
             keepYInitialized = false;
         }
 
-        // AutoJump with KeepY conflict handling
+        // AutoJump handling with KeepY conflict
         if (getSetting("AutoJump").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && !mc.thePlayer.isSneaking()) {
                 if (getSetting("KeepY").getValue().equals("On")) {
-                    // Prevent jump to stay at same Y
                     mc.thePlayer.motionY = 0;
                 } else {
                     mc.thePlayer.jump();
@@ -63,7 +62,7 @@ public class Scaffold extends Module {
             }
         }
 
-        // KeepY: maintain exact Y level
+        // KeepY: enforce exact Y level
         if (getSetting("KeepY").getValue().equals("On")) {
             double currentY = mc.thePlayer.posY;
             if (currentY > keepYLevel) {
@@ -76,11 +75,10 @@ public class Scaffold extends Module {
             }
         }
 
-        // Determine target block position
+        // Determine block position
         BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
 
         if (mode.equals("Telly")) {
-            // Place forward or backward based on movement direction
             boolean movingForward = mc.thePlayer.moveForward > 0;
             boolean movingBackward = mc.thePlayer.moveForward < 0;
             if (movingForward || movingBackward) {
@@ -97,7 +95,7 @@ public class Scaffold extends Module {
             }
         }
 
-        // SafeWalk: prevent falling off edge
+        // SafeWalk
         if (getSetting("SafeWalk").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
                 mc.thePlayer.motionX *= 0.5;
@@ -122,7 +120,7 @@ public class Scaffold extends Module {
                 mc.thePlayer.motionZ = 0;
             }
 
-            // Rotate toward block
+            // Rotate toward block (visible)
             if (getSetting("Rotate").getValue().equals("On")) {
                 rotateToBlock(below);
             }
@@ -141,13 +139,27 @@ public class Scaffold extends Module {
             }
         }
 
-        // MoveFix / anticheat-friendly adjustments
-        double fixMultiplier = 0.9;
-        if (mode.equals("Telly") || mode.equals("Godbridge")) {
-            fixMultiplier = 0.8;
+        // MoveFix - more natural
+        String moveFix = getSetting("MoveFix").getValue();
+        if (moveFix.equals("Silent")) {
+            // Recreate real player movement: preserve forward momentum, reduce strafing
+            float forward = mc.thePlayer.moveForward;
+            float strafe = mc.thePlayer.moveStrafing;
+            double yaw = Math.toRadians(mc.thePlayer.rotationYaw);
+            double forwardX = -Math.sin(yaw) * forward;
+            double forwardZ = Math.cos(yaw) * forward;
+            double strafeX = Math.cos(yaw) * strafe;
+            double strafeZ = Math.sin(yaw) * strafe;
+            double speed = 0.15; // normal walking speed factor
+            mc.thePlayer.motionX = forwardX * speed + strafeX * speed * 0.5;
+            mc.thePlayer.motionZ = forwardZ * speed + strafeZ * speed * 0.5;
+        } else if (moveFix.equals("Strict")) {
+            // Almost stop all motion for careful bridging
+            mc.thePlayer.motionX *= 0.1;
+            mc.thePlayer.motionZ *= 0.1;
+            mc.thePlayer.setSprinting(false);
         }
-        mc.thePlayer.motionX *= fixMultiplier;
-        mc.thePlayer.motionZ *= fixMultiplier;
+        // None: no adjustments
     }
 
     private void rotateToBlock(BlockPos pos) {
@@ -158,7 +170,6 @@ public class Scaffold extends Module {
         float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
         float pitch = (float) -(Math.atan2(dy, dist) * 180.0 / Math.PI);
 
-        // Smooth rotation if needed (anticheat-friendly)
         String raycast = getSetting("Raycast").getValue();
         float smoothFactor = 1.0F;
         if (raycast.equals("Legit")) smoothFactor = 0.3F;

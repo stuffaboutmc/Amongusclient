@@ -22,7 +22,7 @@ public class Scaffold extends Module {
     private int prevSlot = -1;
     private Random random = new Random();
 
-    public static boolean shouldSuppressSprint = false; // used by Sprint module
+    public static boolean shouldSuppressSprint = false;
 
     public Scaffold() {
         super("Scaffold", Keyboard.KEY_NONE, Category.MOVEMENT, "Places blocks under you with advanced controls.");
@@ -64,7 +64,7 @@ public class Scaffold extends Module {
         }
         RotationUtils.silentRotations = getSetting("Silent").getValue().equals("On");
 
-        // AutoJump works (KeepY no longer interferes)
+        // AutoJump
         if (getSetting("AutoJump").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && !mc.thePlayer.isSneaking()) {
                 mc.thePlayer.jump();
@@ -120,14 +120,13 @@ public class Scaffold extends Module {
                     mc.thePlayer.motionZ = 0;
                 }
 
-                // Rotate humanized
+                // Rotate toward the block
                 float[] rotations = RotationUtils.getRotations(new Vec3(below.getX() + 0.5, below.getY() + 0.5, below.getZ() + 0.5));
                 RotationUtils.applyRotations(rotations[0], rotations[1]);
 
                 long baseDelay = (long) getSetting("PlaceDelay").getDoubleValue();
-                // If KeepY enabled, add extra delay to allow natural jumps and maintain Y
                 if (getSetting("KeepY").getValue().equals("On")) {
-                    baseDelay += 100; // extra 100ms
+                    baseDelay += 100;
                 }
                 long jitter = (long) (random.nextGaussian() * 25);
                 long actualDelay = Math.max(0, baseDelay + jitter);

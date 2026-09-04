@@ -54,7 +54,6 @@ public class Scaffold extends Module {
             return;
         }
 
-        // Rotation mode and custom params
         RotationUtils.rotationMode = getSetting("Rotation").getValue();
         if (RotationUtils.rotationMode.equals("Custom")) {
             RotationUtils.customBaseSpeed = (float) getSetting("CustomSpeed").getDoubleValue();
@@ -71,7 +70,6 @@ public class Scaffold extends Module {
             }
         }
 
-        // Determine block position
         BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
 
         if (mode.equals("Telly")) {
@@ -104,7 +102,7 @@ public class Scaffold extends Module {
         boolean needsPlacement = mc.theWorld.getBlockState(below).getBlock() == Blocks.air;
 
         if (needsPlacement) {
-            if (isPlacementReachable(below, getSetting("Raycast").getValue())) {
+            if (shouldPlaceBlock(below)) {
                 if (mode.equals("Godbridge")) {
                     blocksSinceJump++;
                     if (blocksSinceJump >= 9) {
@@ -120,7 +118,6 @@ public class Scaffold extends Module {
                     mc.thePlayer.motionZ = 0;
                 }
 
-                // Rotate toward the block
                 float[] rotations = RotationUtils.getRotations(new Vec3(below.getX() + 0.5, below.getY() + 0.5, below.getZ() + 0.5));
                 RotationUtils.applyRotations(rotations[0], rotations[1]);
 
@@ -168,68 +165,87 @@ public class Scaffold extends Module {
         }
     }
 
-    private boolean isPlacementReachable(BlockPos pos, String raycastMode) {
-        switch (raycastMode) {
-            case "None":
-                return true;
-            case "Instant":
-                return true;
-            case "Basic":
-                double dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                return dist <= 4.5;
-            case "Legit":
-                dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                if (dist > 4.5) return false;
-                Vec3 eyes = mc.thePlayer.getPositionEyes(1.0F);
-                Vec3 targetVec = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                return mc.theWorld.rayTraceBlocks(eyes, targetVec, false, true, false) == null;
-            case "Advanced":
-                dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                if (dist > 4.5) return false;
-                Vec3 eyePos = mc.thePlayer.getPositionEyes(1.0F);
-                Vec3 blockVec = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                MovingObjectPosition mop = mc.theWorld.rayTraceBlocks(eyePos, blockVec, false, true, false);
-                return mop != null && mop.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK;
-            default:
-                return true;
+    private boolean shouldPlaceBlock(BlockPos pos) {
+        // Ensure pos is air
+        if (mc.theWorld.getBlockState(pos).getBlock() != Blocks.air) return false;
+
+        // Find adjacent solid block to click on
+        for (EnumFacing face : EnumFacing.values()) {
+            BlockPos neighbor = pos.offset(face);
+            if (mc.theWorld.getBlockState(neighbor).getBlock() == Blocks.air) continue;
+
+            double dist = mc.thePlayer.getDistance(neighbor.getX() + 0.5, neighbor.getY() + 0.5, neighbor.getZ() + 0.5);
+            if (dist > 4.5) continue;
+
+            String raycastMode = getSetting("Raycast").getValue();
+            switch (raycastMode) {
+                case "None":
+                case "Instant":
+                case "Basic":
+                    return true;
+                case "Legit":
+                    // Check line of sight to neighbor block center
+                    Vec3 eyes = mc.thePlayer.getPositionEyes(1.0F);
+                    Vec3 targetVec = new Vec3(neighbor.getX() + 0.5, neighbor.getY() + 0.5, neighbor.getZ() + 0.5);
+                    return mc.theWorld.rayTraceBlocks(eyes, targetVec, false, true, false) == null;
+                case "Advanced":
+                    // Use exact ray trace to block face
+                    Vec3 eyePos = mc.thePlayer.getPositionEyes(1.0F);
+                    Vec3 blockVec = new Vec3(neighbor.getX() + 0.5, neighbor.getY() + 0.5, neighbor.getZ() + 0.5);
+                    MovingObjectPosition mop = mc.theWorld.rayTraceBlocks(eyePos, blockVec, false, true, false);
+                    return mop != null && mop.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK && mop.getBlockPos().equals(neighbor);
+                default:
+                    return true;
+            }
         }
+        return false;
     }
 
     private boolean tryPlaceBlock(BlockPos pos) {
-        ItemStack held = mc.thePlayer.getHeldItem();
-        if (held == null || !(held.getItem() instanceof ItemBlock)) {
-            if (getSetting("AutoSwitch").getValue().equals("On")) {
-                for (int i = 0; i < 9; i++) {
-                    ItemStack stack = mc.thePlayer.inventory.getStackInSlot(i);
-                    if (stack != null && stack.getItem() instanceof ItemBlock) {
-                        prevSlot = mc.thePlayer.inventory.currentItem;
-                        mc.thePlayer.inventory.currentItem = i;
-                        held = stack;
-                        break;
+        // Find adjacent block to click on for placement
+        for (EnumFacing face : EnumFacing.values()) {
+            BlockPos neighbor = pos.offset(face);
+            if (mc.theWorld.getBlockState(neighbor).getBlock() == Blocks.air) continue;
+
+            ItemStack held = mc.thePlayer.getHeldItem();
+            if (held == null || !(held.getItem() instanceof ItemBlock)) {
+                if (getSetting("AutoSwitch").getValue().equals("On")) {
+                    for (int i = 0; i < 9; i++) {
+                        ItemStack stack = mc.thePlayer.inventory.getStackInSlot(i);
+                        if (stack != null && stack.getItem() instanceof ItemBlock) {
+                            prevSlot = mc.thePlayer.inventory.currentItem;
+                            mc.thePlayer.inventory.currentItem = i;
+                            held = stack;
+                            break;
+                        }
                     }
                 }
+                if (held == null || !(held.getItem() instanceof ItemBlock)) return false;
             }
-            if (held == null || !(held.getItem() instanceof ItemBlock)) return false;
+
+            Block block = ((ItemBlock) held.getItem()).getBlock();
+            if (block == Blocks.air) return false;
+
+            // Click on the neighbor block face opposite to the air block
+            mc.playerController.onPlayerRightClick(
+                mc.thePlayer,
+                mc.theWorld,
+                held,
+                neighbor,
+                face.getOpposite(),
+                new Vec3(neighbor.getX() + 0.5 + face.getFrontOffsetX() * 0.5,
+                         neighbor.getY() + 0.5 + face.getFrontOffsetY() * 0.5,
+                         neighbor.getZ() + 0.5 + face.getFrontOffsetZ() * 0.5)
+            );
+            mc.thePlayer.swingItem();
+
+            if (prevSlot != -1) {
+                mc.thePlayer.inventory.currentItem = prevSlot;
+                prevSlot = -1;
+            }
+            return true;
         }
-
-        Block block = ((ItemBlock) held.getItem()).getBlock();
-        if (block == Blocks.air) return false;
-
-        mc.playerController.onPlayerRightClick(
-            mc.thePlayer,
-            mc.theWorld,
-            held,
-            pos,
-            EnumFacing.UP,
-            new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)
-        );
-        mc.thePlayer.swingItem();
-
-        if (prevSlot != -1) {
-            mc.thePlayer.inventory.currentItem = prevSlot;
-            prevSlot = -1;
-        }
-        return true;
+        return false;
     }
 
     @Override

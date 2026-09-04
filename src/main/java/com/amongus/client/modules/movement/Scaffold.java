@@ -1,6 +1,7 @@
 package com.amongus.client.modules.movement;
 
 import com.amongus.client.modules.Module;
+import com.amongus.client.utils.RotationUtils;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemBlock;
@@ -13,17 +14,25 @@ import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.input.Keyboard;
 
+import java.util.Random;
+
 public class Scaffold extends Module {
     private int blocksSinceJump = 0;
     private long lastPlaceTime = 0;
     private int prevSlot = -1;
     private double keepYLevel = 0;
     private boolean keepYInitialized = false;
+    private Random random = new Random();
 
     public Scaffold() {
         super("Scaffold", Keyboard.KEY_NONE, Category.MOVEMENT, "Places blocks under you with advanced controls.");
         addSetting(new Setting("Mode", new String[]{"None","Telly","Normal","Godbridge","Snap"}, "Normal"));
-        addSetting(new Setting("Rotate", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("Rotation", new String[]{"Humanized","Instant","Normal","Custom"}, "Humanized"));
+        addSetting(new Setting("CustomSpeed", 0.01, 1.0, 0.3, 0.01));
+        addSetting(new Setting("CustomAcceleration", 0.0, 1.0, 0.4, 0.01));
+        addSetting(new Setting("CustomNoiseYaw", 0.0, 2.0, 0.4, 0.05));
+        addSetting(new Setting("CustomNoisePitch", 0.0, 1.0, 0.2, 0.05));
+        addSetting(new Setting("Silent", new String[]{"Off","On"}, "Off")); // NEW: Silent toggle
         addSetting(new Setting("MoveFix", new String[]{"None","Silent","Strict"}, "Silent"));
         addSetting(new Setting("Tower", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("PlaceDelay", 0, 500, 0, 10));
@@ -42,6 +51,17 @@ public class Scaffold extends Module {
         String mode = getSetting("Mode").getValue();
         if (mode.equals("None")) return;
 
+        // Rotation mode and custom params
+        RotationUtils.rotationMode = getSetting("Rotation").getValue();
+        if (RotationUtils.rotationMode.equals("Custom")) {
+            RotationUtils.customBaseSpeed = (float) getSetting("CustomSpeed").getDoubleValue();
+            RotationUtils.customAcceleration = (float) getSetting("CustomAcceleration").getDoubleValue();
+            RotationUtils.customNoiseYaw = (float) getSetting("CustomNoiseYaw").getDoubleValue();
+            RotationUtils.customNoisePitch = (float) getSetting("CustomNoisePitch").getDoubleValue();
+        }
+        RotationUtils.silentRotations = getSetting("Silent").getValue().equals("On");
+
+        // KeepY initialization
         if (getSetting("KeepY").getValue().equals("On")) {
             if (!keepYInitialized) {
                 keepYLevel = Math.floor(mc.thePlayer.posY);
@@ -51,28 +71,31 @@ public class Scaffold extends Module {
             keepYInitialized = false;
         }
 
+        // AutoJump with KeepY suppression
         if (getSetting("AutoJump").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && !mc.thePlayer.isSneaking()) {
-                if (getSetting("KeepY").getValue().equals("On")) {
-                    mc.thePlayer.motionY = 0;
-                } else {
+                if (!getSetting("KeepY").getValue().equals("On")) {
                     mc.thePlayer.jump();
                 }
             }
         }
 
+        // KeepY: strict Y control
         if (getSetting("KeepY").getValue().equals("On")) {
             double currentY = mc.thePlayer.posY;
             if (currentY > keepYLevel) {
-                mc.thePlayer.motionY -= 0.1;
-                if (mc.thePlayer.motionY < -0.5) mc.thePlayer.motionY = -0.5;
+                mc.thePlayer.motionY = -0.3;
             } else if (currentY < keepYLevel) {
                 mc.thePlayer.motionY = 0.1;
             } else {
                 mc.thePlayer.motionY = 0;
             }
+            if (mc.thePlayer.posY >= keepYLevel && mc.thePlayer.motionY > 0) {
+                mc.thePlayer.motionY = 0;
+            }
         }
 
+        // Determine block position
         BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
 
         if (mode.equals("Telly")) {
@@ -92,6 +115,7 @@ public class Scaffold extends Module {
             }
         }
 
+        // SafeWalk
         if (getSetting("SafeWalk").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
                 mc.thePlayer.motionX *= 0.5;
@@ -102,29 +126,34 @@ public class Scaffold extends Module {
         boolean needsPlacement = mc.theWorld.getBlockState(below).getBlock() == Blocks.air;
 
         if (needsPlacement) {
-            // Raycast check before placing
             if (isPlacementReachable(below, getSetting("Raycast").getValue())) {
                 if (mode.equals("Godbridge")) {
                     blocksSinceJump++;
                     if (blocksSinceJump >= 9) {
-                        mc.thePlayer.jump();
+                        if (!getSetting("KeepY").getValue().equals("On")) {
+                            mc.thePlayer.jump();
+                        }
                         blocksSinceJump = 0;
                         return;
                     }
                 }
 
                 if (mode.equals("Tower") && getSetting("Tower").getValue().equals("On") && mode.equals("Normal")) {
-                    mc.thePlayer.motionY = 0.42;
+                    if (!getSetting("KeepY").getValue().equals("On")) {
+                        mc.thePlayer.motionY = 0.42;
+                    }
                     mc.thePlayer.motionX = 0;
                     mc.thePlayer.motionZ = 0;
                 }
 
-                if (getSetting("Rotate").getValue().equals("On")) {
-                    rotateToBlock(below);
-                }
+                // Rotate with applyRotations (respects Silent)
+                float[] rotations = RotationUtils.getRotations(new Vec3(below.getX() + 0.5, below.getY() + 0.5, below.getZ() + 0.5));
+                RotationUtils.applyRotations(rotations[0], rotations[1]);
 
-                long placeDelay = (long) getSetting("PlaceDelay").getDoubleValue();
-                if (System.currentTimeMillis() - lastPlaceTime >= placeDelay) {
+                long baseDelay = (long) getSetting("PlaceDelay").getDoubleValue();
+                long jitter = (long) (random.nextGaussian() * 25);
+                long actualDelay = Math.max(0, baseDelay + jitter);
+                if (System.currentTimeMillis() - lastPlaceTime >= actualDelay) {
                     boolean placed = tryPlaceBlock(below);
                     if (placed) {
                         lastPlaceTime = System.currentTimeMillis();
@@ -147,14 +176,14 @@ public class Scaffold extends Module {
                                 !needsPlacement;
             mc.thePlayer.setSprinting(canSprint);
             if (needsPlacement) {
-                mc.thePlayer.motionX *= 0.6;
-                mc.thePlayer.motionZ *= 0.6;
+                mc.thePlayer.motionX *= 0.75;
+                mc.thePlayer.motionZ *= 0.75;
             }
         } else if (moveFix.equals("Strict")) {
             mc.thePlayer.setSprinting(false);
             if (needsPlacement) {
-                mc.thePlayer.motionX *= 0.3;
-                mc.thePlayer.motionZ *= 0.3;
+                mc.thePlayer.motionX *= 0.45;
+                mc.thePlayer.motionZ *= 0.45;
             }
         }
     }
@@ -166,18 +195,15 @@ public class Scaffold extends Module {
             case "Instant":
                 return true;
             case "Basic":
-                // Check within reach distance (4.5 blocks)
                 double dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
                 return dist <= 4.5;
             case "Legit":
-                // Check distance and line of sight
                 dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
                 if (dist > 4.5) return false;
                 Vec3 eyes = mc.thePlayer.getPositionEyes(1.0F);
                 Vec3 targetVec = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
                 return mc.theWorld.rayTraceBlocks(eyes, targetVec, false, true, false) == null;
             case "Advanced":
-                // Ray trace to block side, require hitting the block
                 dist = mc.thePlayer.getDistance(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
                 if (dist > 4.5) return false;
                 Vec3 eyePos = mc.thePlayer.getPositionEyes(1.0F);
@@ -187,26 +213,6 @@ public class Scaffold extends Module {
             default:
                 return true;
         }
-    }
-
-    private void rotateToBlock(BlockPos pos) {
-        double dx = pos.getX() + 0.5 - mc.thePlayer.posX;
-        double dy = pos.getY() + 0.5 - (mc.thePlayer.posY + mc.thePlayer.getEyeHeight());
-        double dz = pos.getZ() + 0.5 - mc.thePlayer.posZ;
-        double dist = Math.sqrt(dx * dx + dz * dz);
-        float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
-        float pitch = (float) -(Math.atan2(dy, dist) * 180.0 / Math.PI);
-
-        String raycast = getSetting("Raycast").getValue();
-        float smoothFactor = 1.0F;
-        if (raycast.equals("Legit")) smoothFactor = 0.3F;
-        else if (raycast.equals("Advanced")) smoothFactor = 0.6F;
-        else if (raycast.equals("Instant")) smoothFactor = 1.0F;
-
-        mc.thePlayer.rotationYaw += (yaw - mc.thePlayer.rotationYaw) * smoothFactor;
-        mc.thePlayer.rotationPitch += (pitch - mc.thePlayer.rotationPitch) * smoothFactor;
-        mc.thePlayer.prevRotationYaw = mc.thePlayer.rotationYaw;
-        mc.thePlayer.prevRotationPitch = mc.thePlayer.rotationPitch;
     }
 
     private boolean tryPlaceBlock(BlockPos pos) {

@@ -17,9 +17,11 @@ public class Scaffold extends Module {
     private int blocksSinceJump = 0;
     private long lastPlaceTime = 0;
     private int prevSlot = -1;
+    private double keepYLevel = 0;
+    private boolean keepYInitialized = false;
 
     public Scaffold() {
-        super("Scaffold", Keyboard.KEY_NONE, Category.MOVEMENT, "Places blocks under you with visible rotation.");
+        super("Scaffold", Keyboard.KEY_NONE, Category.MOVEMENT, "Places blocks under you with advanced controls.");
         addSetting(new Setting("Mode", new String[]{"None","Telly","Normal","Godbridge","Snap"}, "Normal"));
         addSetting(new Setting("Rotate", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("Tower", new String[]{"Off","On"}, "Off"));
@@ -28,6 +30,9 @@ public class Scaffold extends Module {
         addSetting(new Setting("KeepY", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("AutoSwitch", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("SafeWalk", new String[]{"Off","On"}, "Off"));
+        addSetting(new Setting("Raycast", new String[]{"None","Basic","Legit","Advanced","Instant"}, "Basic"));
+        addSetting(new Setting("TellyForward", 1, 5, 2, 1));   // blocks forward
+        addSetting(new Setting("TellyBackward", 1, 5, 2, 1)); // blocks backward
     }
 
     @SubscribeEvent
@@ -36,24 +41,63 @@ public class Scaffold extends Module {
         String mode = getSetting("Mode").getValue();
         if (mode.equals("None")) return;
 
-        // AutoJump
+        // Initialize KeepY baseline
+        if (getSetting("KeepY").getValue().equals("On")) {
+            if (!keepYInitialized) {
+                keepYLevel = Math.floor(mc.thePlayer.posY);
+                keepYInitialized = true;
+            }
+        } else {
+            keepYInitialized = false;
+        }
+
+        // AutoJump with KeepY conflict handling
         if (getSetting("AutoJump").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && !mc.thePlayer.isSneaking()) {
-                mc.thePlayer.jump();
+                if (getSetting("KeepY").getValue().equals("On")) {
+                    // Prevent jump to stay at same Y
+                    mc.thePlayer.motionY = 0;
+                } else {
+                    mc.thePlayer.jump();
+                }
             }
         }
 
-        // KeepY
+        // KeepY: maintain exact Y level
         if (getSetting("KeepY").getValue().equals("On")) {
-            BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
-            if (mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
+            double currentY = mc.thePlayer.posY;
+            if (currentY > keepYLevel) {
+                mc.thePlayer.motionY -= 0.1;
+                if (mc.thePlayer.motionY < -0.5) mc.thePlayer.motionY = -0.5;
+            } else if (currentY < keepYLevel) {
                 mc.thePlayer.motionY = 0.1;
+            } else {
+                mc.thePlayer.motionY = 0;
             }
         }
 
+        // Determine target block position
         BlockPos below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
 
-        // SafeWalk
+        if (mode.equals("Telly")) {
+            // Place forward or backward based on movement direction
+            boolean movingForward = mc.thePlayer.moveForward > 0;
+            boolean movingBackward = mc.thePlayer.moveForward < 0;
+            if (movingForward || movingBackward) {
+                int distance = movingForward ? (int) getSetting("TellyForward").getDoubleValue() :
+                                              (int) getSetting("TellyBackward").getDoubleValue();
+                Vec3 look = mc.thePlayer.getLookVec();
+                double dx = look.xCoord * distance;
+                double dz = look.zCoord * distance;
+                if (!movingForward) {
+                    dx = -dx;
+                    dz = -dz;
+                }
+                below = new BlockPos(mc.thePlayer.posX + dx, mc.thePlayer.posY - 1, mc.thePlayer.posZ + dz);
+            }
+        }
+
+        // SafeWalk: prevent falling off edge
         if (getSetting("SafeWalk").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
                 mc.thePlayer.motionX *= 0.5;
@@ -61,6 +105,7 @@ public class Scaffold extends Module {
             }
         }
 
+        // Place block if air
         if (mc.theWorld.getBlockState(below).getBlock() == Blocks.air) {
             if (mode.equals("Godbridge")) {
                 blocksSinceJump++;
@@ -71,13 +116,13 @@ public class Scaffold extends Module {
                 }
             }
 
-            if (mode.equals("Tower") && getSetting("Tower").getValue().equals("On")) {
+            if (mode.equals("Tower") && getSetting("Tower").getValue().equals("On") && mode.equals("Normal")) {
                 mc.thePlayer.motionY = 0.42;
                 mc.thePlayer.motionX = 0;
                 mc.thePlayer.motionZ = 0;
             }
 
-            // Rotate toward the block below
+            // Rotate toward block
             if (getSetting("Rotate").getValue().equals("On")) {
                 rotateToBlock(below);
             }
@@ -95,6 +140,14 @@ public class Scaffold extends Module {
                 prevSlot = -1;
             }
         }
+
+        // MoveFix / anticheat-friendly adjustments
+        double fixMultiplier = 0.9;
+        if (mode.equals("Telly") || mode.equals("Godbridge")) {
+            fixMultiplier = 0.8;
+        }
+        mc.thePlayer.motionX *= fixMultiplier;
+        mc.thePlayer.motionZ *= fixMultiplier;
     }
 
     private void rotateToBlock(BlockPos pos) {
@@ -105,10 +158,17 @@ public class Scaffold extends Module {
         float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
         float pitch = (float) -(Math.atan2(dy, dist) * 180.0 / Math.PI);
 
-        mc.thePlayer.rotationYaw = yaw;
-        mc.thePlayer.rotationPitch = pitch;
-        mc.thePlayer.prevRotationYaw = yaw;
-        mc.thePlayer.prevRotationPitch = pitch;
+        // Smooth rotation if needed (anticheat-friendly)
+        String raycast = getSetting("Raycast").getValue();
+        float smoothFactor = 1.0F;
+        if (raycast.equals("Legit")) smoothFactor = 0.3F;
+        else if (raycast.equals("Advanced")) smoothFactor = 0.6F;
+        else if (raycast.equals("Instant")) smoothFactor = 1.0F;
+
+        mc.thePlayer.rotationYaw += (yaw - mc.thePlayer.rotationYaw) * smoothFactor;
+        mc.thePlayer.rotationPitch += (pitch - mc.thePlayer.rotationPitch) * smoothFactor;
+        mc.thePlayer.prevRotationYaw = mc.thePlayer.rotationYaw;
+        mc.thePlayer.prevRotationPitch = mc.thePlayer.rotationPitch;
     }
 
     private boolean tryPlaceBlock(BlockPos pos) {
@@ -156,5 +216,6 @@ public class Scaffold extends Module {
             prevSlot = -1;
         }
         blocksSinceJump = 0;
+        keepYInitialized = false;
     }
 }

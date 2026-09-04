@@ -14,8 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClickGUI extends Module {
-    private static final Color WINDOW_BG = new Color(32, 32, 37, 255);
-    private static final Color TITLE_BAR = new Color(16, 16, 18, 255);
+    private static final Color WINDOW_BG = new Color(32, 32, 37, 180); // transparent
+    private static final Color TITLE_BAR = new Color(16, 16, 18, 180); // transparent
     private static final Color TAB_ACTIVE = new Color(55, 55, 62, 255);
     private static final Color TAB_INACTIVE = new Color(24, 24, 28, 255);
     private static final Color MODULE_ENABLED = new Color(235, 235, 240, 255);
@@ -87,7 +87,6 @@ public class ClickGUI extends Module {
         private Module.Setting draggedSlider = null;
         private int sliderTrackX, sliderTrackY, sliderTrackWidth;
 
-        // Tab animation fields
         private float highlightX = 0;
         private float highlightWidth = 0;
         private boolean animationInitialized = false;
@@ -118,7 +117,7 @@ public class ClickGUI extends Module {
             if (dragging) { windowX = mouseX - dragOffsetX; windowY = mouseY - dragOffsetY; }
 
             if (minimized) {
-                drawRect(0, 0, 130, 26, new Color(16,16,18,255).getRGB());
+                drawRect(0, 0, 130, 26, new Color(16,16,18,180).getRGB());
                 drawRect(0, 5, 3, 21, ACCENT.getRGB());
                 mc.fontRendererObj.drawStringWithShadow("Augustus", 12, 9, TITLE_TEXT.getRGB());
                 super.drawScreen(mouseX, mouseY, partialTicks);
@@ -128,11 +127,11 @@ public class ClickGUI extends Module {
             // Shadow
             drawSmoothRoundedRect(windowX + 4, windowY + 4, windowX + w + 4, windowY + h + 4, 12, new Color(0,0,0,100).getRGB());
 
-            // Main window
+            // Main window (transparent)
             drawSmoothRoundedRect(windowX, windowY, windowX + w, windowY + h, 12, WINDOW_BG.getRGB());
             drawSmoothRoundedOutline(windowX, windowY, windowX + w, windowY + h, 12, OUTLINE.getRGB());
 
-            // Title bar
+            // Title bar (transparent)
             drawSmoothRoundedRect(windowX, windowY, windowX + w, windowY + 30, 12, TITLE_BAR.getRGB());
             drawRect(windowX, windowY + 15, windowX + w, windowY + 30, TITLE_BAR.getRGB());
             drawRect(windowX + 4, windowY + 4, windowX + 6, windowY + 26, ACCENT.getRGB());
@@ -173,7 +172,7 @@ public class ClickGUI extends Module {
                 highlightWidth += (targetWidth - highlightWidth) * 0.3f;
             }
 
-            // Draw tabs (static, no hover)
+            // Draw tabs (static)
             tx = windowX + 16;
             for (int i = 0; i < categoryNames.length; i++) {
                 int tw = mc.fontRendererObj.getStringWidth(categoryNames[i]) + 20;

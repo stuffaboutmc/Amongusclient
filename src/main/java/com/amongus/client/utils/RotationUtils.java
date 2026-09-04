@@ -6,29 +6,21 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.Vec3;
 import net.minecraft.network.play.client.C03PacketPlayer;
-import java.util.Random;
 
 public class RotationUtils {
     private static Minecraft mc = Minecraft.getMinecraft();
-    private static Random random = new Random();
-
-    // Current rotation state
-    private static float currentYaw, currentPitch;
-    private static boolean initialized = false;
 
     public static String rotationMode = "Humanized";
     public static boolean silentRotations = false;
 
-    // Custom mode parameters
+    private static float currentYaw;
+    private static float currentPitch;
+    private static boolean initialized = false;
+
     public static float customBaseSpeed = 0.3f;
     public static float customAcceleration = 0.4f;
-    public static float customNoiseYaw = 0.4f;   // half-range of noise in degrees
+    public static float customNoiseYaw = 0.4f;
     public static float customNoisePitch = 0.2f;
-
-    // For humanized micro-correction
-    private static long lastNoiseUpdate = 0;
-    private static float currentNoiseYaw = 0;
-    private static float currentNoisePitch = 0;
 
     public static float[] getRotations(EntityLivingBase target) {
         Vec3 eyes = mc.thePlayer.getPositionEyes(1.0F);
@@ -51,57 +43,49 @@ public class RotationUtils {
         float targetYaw = (float) (Math.atan2(diffZ, diffX) * 180.0 / Math.PI) - 90.0F;
         float targetPitch = (float) -(Math.atan2(diffY, dist) * 180.0 / Math.PI);
 
-        // Apply GCD fix
         float gcd = getGCD();
         targetYaw = Math.round(targetYaw / gcd) * gcd;
         targetPitch = Math.round(targetPitch / gcd) * gcd;
 
-        // Add noise based on mode
-        updateNoise();
-        targetYaw += currentNoiseYaw;
-        targetPitch += currentNoisePitch;
+        // Add noise using Math.random()
+        float yawNoise = (float)(Math.random() - 0.5) * 0.4f;
+        float pitchNoise = (float)(Math.random() - 0.5) * 0.2f;
+        targetYaw += yawNoise;
+        targetPitch += pitchNoise;
 
-        float newYaw, newPitch;
         switch (rotationMode) {
             case "Instant":
-                newYaw = targetYaw;
-                newPitch = targetPitch;
+                currentYaw = targetYaw;
+                currentPitch = targetPitch;
                 break;
             case "Normal":
-                // Simple linear interpolation
-                newYaw = interpolateAngle(currentYaw, targetYaw, 0.5f);
-                newPitch = interpolateAngle(currentPitch, targetPitch, 0.5f);
-                break;
-            case "Humanized":
-                newYaw = humanizedYaw(currentYaw, targetYaw);
-                newPitch = humanizedPitch(currentPitch, targetPitch);
+                currentYaw = interpolateAngle(currentYaw, targetYaw, 0.5f);
+                currentPitch = interpolateAngle(currentPitch, targetPitch, 0.5f);
                 break;
             case "Custom":
-                newYaw = customYaw(currentYaw, targetYaw);
-                newPitch = customPitch(currentPitch, targetPitch);
+                currentYaw = customInterpolateYaw(currentYaw, targetYaw);
+                currentPitch = customInterpolatePitch(currentPitch, targetPitch);
                 break;
-            default: // fallback to humanized
-                newYaw = humanizedYaw(currentYaw, targetYaw);
-                newPitch = humanizedPitch(currentPitch, targetPitch);
+            case "Humanized":
+            default:
+                currentYaw = humanizedYaw(currentYaw, targetYaw);
+                currentPitch = humanizedPitch(currentPitch, targetPitch);
+                break;
         }
 
-        currentYaw = newYaw;
-        currentPitch = newPitch;
         return new float[]{currentYaw, currentPitch};
     }
 
     private static float humanizedYaw(float from, float to) {
         float diff = MathHelper.wrapAngleTo180_float(to - from);
         float absDiff = Math.abs(diff);
-        // Base speed and acceleration
         float speed = 0.25f + 0.3f * (absDiff / 180.0f);
-        speed *= (1 + (random.nextFloat() - 0.5f) * 0.2f); // jitter
+        speed *= (1.0f + (float)(Math.random() - 0.5) * 0.2f);
         if (speed > 0.9f) speed = 0.9f;
         if (speed < 0.05f) speed = 0.05f;
         float delta = diff * speed;
-        // Occasional overshoot
-        if (absDiff < 2.0f && random.nextFloat() < 0.05f) {
-            delta += (random.nextFloat() - 0.5f) * 0.3f;
+        if (absDiff < 2.0f && Math.random() < 0.05f) {
+            delta += (float)(Math.random() - 0.5) * 0.3f;
         }
         return from + delta;
     }
@@ -110,45 +94,34 @@ public class RotationUtils {
         float diff = to - from;
         float absDiff = Math.abs(diff);
         float speed = 0.2f + 0.2f * (absDiff / 90.0f);
-        speed *= (1 + (random.nextFloat() - 0.5f) * 0.15f);
+        speed *= (1.0f + (float)(Math.random() - 0.5) * 0.15f);
         if (speed > 0.7f) speed = 0.7f;
         if (speed < 0.03f) speed = 0.03f;
         float delta = diff * speed;
-        if (absDiff < 1.0f && random.nextFloat() < 0.05f) {
-            delta += (random.nextFloat() - 0.5f) * 0.2f;
+        if (absDiff < 1.0f && Math.random() < 0.05f) {
+            delta += (float)(Math.random() - 0.5) * 0.2f;
         }
         return from + delta;
     }
 
-    private static float customYaw(float from, float to) {
+    private static float customInterpolateYaw(float from, float to) {
         float diff = MathHelper.wrapAngleTo180_float(to - from);
         float absDiff = Math.abs(diff);
         float speed = customBaseSpeed + customAcceleration * (absDiff / 180.0f);
-        speed *= (1 + (random.nextFloat() - 0.5f) * (customNoiseYaw * 0.02f));
+        speed *= (1.0f + (float)(Math.random() - 0.5) * (customNoiseYaw * 0.02f));
         if (speed > 0.95f) speed = 0.95f;
         if (speed < 0.01f) speed = 0.01f;
         return from + diff * speed;
     }
 
-    private static float customPitch(float from, float to) {
+    private static float customInterpolatePitch(float from, float to) {
         float diff = to - from;
         float absDiff = Math.abs(diff);
         float speed = customBaseSpeed * 0.8f + customAcceleration * 0.8f * (absDiff / 90.0f);
-        speed *= (1 + (random.nextFloat() - 0.5f) * (customNoisePitch * 0.02f));
+        speed *= (1.0f + (float)(Math.random() - 0.5) * (customNoisePitch * 0.02f));
         if (speed > 0.8f) speed = 0.8f;
         if (speed < 0.01f) speed = 0.01f;
         return from + diff * speed;
-    }
-
-    private static void updateNoise() {
-        long now = System.currentTimeMillis();
-        if (now - lastNoiseUpdate > 200 + random.nextInt(300)) {
-            float noiseYawRange = rotationMode.equals("Custom") ? customNoiseYaw : 0.4f;
-            float noisePitchRange = rotationMode.equals("Custom") ? customNoisePitch : 0.2f;
-            currentNoiseYaw = (random.nextFloat() - 0.5f) * noiseYawRange;
-            currentNoisePitch = (random.nextFloat() - 0.5f) * noisePitchRange;
-            lastNoiseUpdate = now;
-        }
     }
 
     public static void applyRotations(float yaw, float pitch) {

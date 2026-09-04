@@ -223,6 +223,11 @@ public class ClickGUI extends Module {
                     if (settingY < windowY + PANEL_TOP - 15) { settingY += 15; continue; }
                     if (settingY > windowY + h - PANEL_BOTTOM) break;
 
+                    if (!isSettingVisible(selectedModule, setting)) {
+                        settingY += 15;
+                        continue;
+                    }
+
                     if (setting.isSlider()) {
                         String name = setting.getName();
                         double value = setting.getDoubleValue();
@@ -405,6 +410,25 @@ public class ClickGUI extends Module {
             return result;
         }
 
+        // Hide settings based on parent mode
+        private boolean isSettingVisible(Module mod, Module.Setting setting) {
+            String name = setting.getName();
+
+            // AntiBot checks: only visible when AntiBot mode is Custom
+            if (name.startsWith("Check")) {
+                Module.Setting antiBot = mod.getSetting("AntiBot");
+                return antiBot != null && antiBot.getValue().equals("Custom");
+            }
+
+            // Rotation custom parameters: only visible when Rotation mode is Custom
+            if (name.startsWith("Custom") && (name.contains("Speed") || name.contains("Acceleration") || name.contains("Noise"))) {
+                Module.Setting rotation = mod.getSetting("Rotation");
+                return rotation != null && rotation.getValue().equals("Custom");
+            }
+
+            return true;
+        }
+
         @Override
         protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
             int iconSize = 18;
@@ -471,6 +495,11 @@ public class ClickGUI extends Module {
                 for (Module.Setting setting : selectedModule.getSettings()) {
                     if (settingY < windowY + PANEL_TOP - 15) { settingY += 15; continue; }
                     if (settingY > windowY + h - PANEL_BOTTOM) break;
+
+                    if (!isSettingVisible(selectedModule, setting)) {
+                        settingY += 15;
+                        continue;
+                    }
 
                     if (setting.isSlider()) {
                         int labelWidth = mc.fontRendererObj.getStringWidth(setting.getName() + ":");

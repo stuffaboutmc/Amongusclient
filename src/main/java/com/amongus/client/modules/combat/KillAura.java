@@ -3,6 +3,7 @@ package com.amongus.client.modules.combat;
 import com.amongus.client.AmongusClient;
 import com.amongus.client.modules.Module;
 import com.amongus.client.utils.RotationUtils;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.entity.passive.EntityAnimal;
@@ -43,7 +44,10 @@ public class KillAura extends Module {
         addSetting(new Setting("AttackSpeed", 1, 20, 10, 1));
         addSetting(new Setting("Range", 3, 8, 6, 0.5));
         addSetting(new Setting("Prioritize", new String[]{"Nearest","LowestHP","HighestHP"}, "Nearest"));
-        addSetting(new Setting("Target", new String[]{"Players","Mobs","Animals","Invisible"}, "Players"));
+        addSetting(new Setting("TargetPlayers", new String[]{"Off","On"}, "On"));
+        addSetting(new Setting("TargetMobs", new String[]{"Off","On"}, "Off"));
+        addSetting(new Setting("TargetAnimals", new String[]{"Off","On"}, "Off"));
+        addSetting(new Setting("TargetInvisible", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("Invisibles", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("ThroughWalls", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("Raycast", new String[]{"None","Basic","Legit","Advanced","Instant"}, "Basic"));
@@ -54,9 +58,7 @@ public class KillAura extends Module {
         addSetting(new Setting("IgnoreTeammates", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("MaxTargets", 1, 10, 1, 1));
 
-        // AntiBot modes
         addSetting(new Setting("AntiBot", new String[]{"Off","Advanced","Custom"}, "Advanced"));
-        // Custom AntiBot toggles
         addSetting(new Setting("CheckTab", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("CheckName", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("CheckPing", new String[]{"Off","On"}, "Off"));
@@ -185,20 +187,24 @@ public class KillAura extends Module {
         EntityLivingBase best = null;
         double bestValue = Double.MAX_VALUE;
         String prioritize = getSetting("Prioritize").getValue();
-        String targetType = getSetting("Target").getValue();
         double fov = getSetting("FOV").getDoubleValue();
         int maxTargets = (int) getSetting("MaxTargets").getDoubleValue();
         int count = 0;
 
-        for (EntityLivingBase entity : mc.theWorld.playerEntities) {
+        for (Object obj : mc.theWorld.loadedEntityList) {
+            if (!(obj instanceof EntityLivingBase)) continue;
+            EntityLivingBase entity = (EntityLivingBase) obj;
             if (entity == mc.thePlayer || entity.isDead || entity.getHealth() <= 0) continue;
 
-            if (targetType.equals("Players") && !(entity instanceof EntityPlayer)) continue;
-            if (targetType.equals("Mobs") && !(entity instanceof EntityMob)) continue;
-            if (targetType.equals("Animals") && !(entity instanceof EntityAnimal)) continue;
-            if (targetType.equals("Invisible") && !entity.isInvisible()) continue;
-            if (!targetType.equals("Invisible") &&
-                getSetting("Invisibles").getValue().equals("Off") && entity.isInvisible()) continue;
+            boolean matchesType = false;
+            if (getSetting("TargetPlayers").getValue().equals("On") && entity instanceof EntityPlayer) matchesType = true;
+            if (getSetting("TargetMobs").getValue().equals("On") && entity instanceof EntityMob) matchesType = true;
+            if (getSetting("TargetAnimals").getValue().equals("On") && entity instanceof EntityAnimal) matchesType = true;
+            if (getSetting("TargetInvisible").getValue().equals("On") && entity.isInvisible()) matchesType = true;
+            if (!matchesType) continue;
+
+            if (entity.isInvisible() && getSetting("Invisibles").getValue().equals("Off") &&
+                getSetting("TargetInvisible").getValue().equals("Off")) continue;
 
             if (isBot(entity)) continue;
 

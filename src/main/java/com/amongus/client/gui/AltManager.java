@@ -3,6 +3,7 @@ package com.amongus.client.gui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.Session;
+import com.amongus.client.utils.NotificationManager;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -102,7 +103,6 @@ public class AltManager {
             if (alt.isTokenAlt) {
                 session = new Session(alt.name, alt.token, "legacy", "legacy");
             } else {
-                // Offline login - use name only
                 session = new Session(alt.name, "offline", "offline", "offline");
             }
             setSession(session);
@@ -128,7 +128,6 @@ public class AltManager {
         try {
             sessionField = Minecraft.class.getDeclaredField("session");
         } catch (NoSuchFieldException e) {
-            // Try obfuscated name
             sessionField = Minecraft.class.getDeclaredField("field_71449_j");
         }
         sessionField.setAccessible(true);
@@ -143,8 +142,6 @@ public class AltManager {
 
     public static void setStatus(String message) {
         lastStatus = message;
-        if (mc.thePlayer != null) {
-            mc.thePlayer.addChatMessage(new ChatComponentText("§a[AltManager] §f" + message));
-        }
+        NotificationManager.addNotification(message);
     }
 }

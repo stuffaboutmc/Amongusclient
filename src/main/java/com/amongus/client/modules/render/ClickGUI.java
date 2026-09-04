@@ -3,6 +3,7 @@ package com.amongus.client.modules.render;
 import com.amongus.client.AmongusClient;
 import com.amongus.client.modules.Module;
 import com.amongus.client.utils.ConfigManager;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.input.Keyboard;
@@ -14,8 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClickGUI extends Module {
-    private static final Color WINDOW_BG = new Color(32, 32, 37, 180); // transparent
-    private static final Color TITLE_BAR = new Color(16, 16, 18, 180); // transparent
+    private static final Color WINDOW_BG = new Color(32, 32, 37, 180);
+    private static final Color TITLE_BAR = new Color(16, 16, 18, 180);
     private static final Color TAB_ACTIVE = new Color(55, 55, 62, 255);
     private static final Color TAB_INACTIVE = new Color(24, 24, 28, 255);
     private static final Color MODULE_ENABLED = new Color(235, 235, 240, 255);
@@ -47,7 +48,7 @@ public class ClickGUI extends Module {
 
     private static void saveTab(int tab) {
         try {
-            if (tabFile == null) tabFile = new File(mc.mcDataDir, "amongus/tab.txt");
+            if (tabFile == null) tabFile = new File(Minecraft.getMinecraft().mcDataDir, "amongus/tab.txt");
             if (!tabFile.getParentFile().exists()) tabFile.getParentFile().mkdirs();
             FileWriter writer = new FileWriter(tabFile);
             writer.write(String.valueOf(tab));
@@ -57,7 +58,7 @@ public class ClickGUI extends Module {
 
     private static int loadTab() {
         try {
-            if (tabFile == null) tabFile = new File(mc.mcDataDir, "amongus/tab.txt");
+            if (tabFile == null) tabFile = new File(Minecraft.getMinecraft().mcDataDir, "amongus/tab.txt");
             if (!tabFile.exists()) return 0;
             BufferedReader reader = new BufferedReader(new FileReader(tabFile));
             String line = reader.readLine();
@@ -124,14 +125,10 @@ public class ClickGUI extends Module {
                 return;
             }
 
-            // Shadow
             drawSmoothRoundedRect(windowX + 4, windowY + 4, windowX + w + 4, windowY + h + 4, 12, new Color(0,0,0,100).getRGB());
-
-            // Main window (transparent)
             drawSmoothRoundedRect(windowX, windowY, windowX + w, windowY + h, 12, WINDOW_BG.getRGB());
             drawSmoothRoundedOutline(windowX, windowY, windowX + w, windowY + h, 12, OUTLINE.getRGB());
 
-            // Title bar (transparent)
             drawSmoothRoundedRect(windowX, windowY, windowX + w, windowY + 30, 12, TITLE_BAR.getRGB());
             drawRect(windowX, windowY + 15, windowX + w, windowY + 30, TITLE_BAR.getRGB());
             drawRect(windowX + 4, windowY + 4, windowX + 6, windowY + 26, ACCENT.getRGB());
@@ -141,14 +138,12 @@ public class ClickGUI extends Module {
             mc.fontRendererObj.drawStringWithShadow("Augustus", (windowX + 16) / 1.4f, (windowY + 9) / 1.4f, TITLE_TEXT.getRGB());
             GlStateManager.popMatrix();
 
-            // Window controls
             int cx = windowX + w - 80;
             int cy = windowY + 8;
             drawControlButton(cx, cy, 16, 14, "_", mouseX, mouseY);
             drawControlButton(cx + 20, cy, 16, 14, "□", mouseX, mouseY);
             drawControlButton(cx + 40, cy, 16, 14, "X", mouseX, mouseY);
 
-            // Compute tab positions and animate highlight
             int tx = windowX + 16;
             int ty = windowY + 38;
             float targetX = 0;
@@ -172,7 +167,6 @@ public class ClickGUI extends Module {
                 highlightWidth += (targetWidth - highlightWidth) * 0.3f;
             }
 
-            // Draw tabs (static)
             tx = windowX + 16;
             for (int i = 0; i < categoryNames.length; i++) {
                 int tw = mc.fontRendererObj.getStringWidth(categoryNames[i]) + 20;
@@ -183,10 +177,8 @@ public class ClickGUI extends Module {
                 tx += tw + 4;
             }
 
-            // Animated highlight underline
             drawRect((int)highlightX + 4, ty + 18, (int)(highlightX + highlightWidth) - 4, ty + 20, ACCENT.getRGB());
 
-            // Scroll handling
             int dWheel = Mouse.getDWheel();
             if (dWheel != 0) {
                 if (mouseX >= windowX + MODULE_PANEL_X && mouseX <= windowX + MODULE_PANEL_X + MODULE_PANEL_WIDTH) {
@@ -198,7 +190,6 @@ public class ClickGUI extends Module {
                 }
             }
 
-            // Module panel
             List<Module> modules = getModules(activeTab);
             maxModuleScroll = Math.max(0, modules.size() - 18);
             moduleScrollOffset = Math.min(moduleScrollOffset, maxModuleScroll);
@@ -221,7 +212,6 @@ public class ClickGUI extends Module {
                 moduleY += 15;
             }
 
-            // Settings panel
             if (selectedModule != null) {
                 int settingsX = windowX + SETTINGS_PANEL_X;
                 List<Module.Setting> settings = selectedModule.getSettings();
@@ -269,7 +259,7 @@ public class ClickGUI extends Module {
                         sliderTrackY = trackY;
                         sliderTrackWidth = trackWidth;
                     } else if (!setting.isSlider() && setting.getOptions() != null && setting.getOptions().length > 2) {
-                        drawStringWithShadow(setting.getName() + ":", settingsX, settingY + 2, SETTING_LABEL.getRGB());
+                        mc.fontRendererObj.drawStringWithShadow(setting.getName() + ":", settingsX, settingY + 2, SETTING_LABEL.getRGB());
                         int pillX = settingsX + mc.fontRendererObj.getStringWidth(setting.getName()) + 12;
                         for (String option : setting.getOptions()) {
                             int pillWidth = mc.fontRendererObj.getStringWidth(option) + 10;

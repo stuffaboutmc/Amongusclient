@@ -13,8 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClickGUI extends Module {
-    private static final Color WINDOW_BG = new Color(40, 40, 45, 255);
-    private static final Color TITLE_BAR = new Color(28, 28, 32, 255);
+    // Augustus-style colors with dark opaque title bar
+    private static final Color WINDOW_BG = new Color(35, 35, 40, 255);
+    private static final Color TITLE_BAR = new Color(18, 18, 20, 255); // darker opaque
     private static final Color TAB_ACTIVE = new Color(58, 58, 65, 255);
     private static final Color TAB_INACTIVE = new Color(28, 28, 31, 255);
     private static final Color TAB_HOVER = new Color(44, 44, 49, 255);
@@ -54,8 +55,8 @@ public class ClickGUI extends Module {
         private int settingsScrollOffset = 0;
         private int maxModuleScroll = 0;
         private int maxSettingsScroll = 0;
-        private int windowWidth = 620;
-        private int windowHeight = 420;
+        private int windowWidth = 640;
+        private int windowHeight = 440;
         private boolean minimized = false;
         private boolean maximized = false;
         private boolean dragging = false;
@@ -64,11 +65,11 @@ public class ClickGUI extends Module {
         private Module hoveredModule = null;
         private boolean windowVisible = true;
 
-        private final int MODULE_PANEL_X = 10;
-        private final int MODULE_PANEL_WIDTH = 140;
-        private final int SETTINGS_PANEL_X = 160;
-        private final int PANEL_TOP = 60;
-        private final int PANEL_BOTTOM = 20;
+        private final int MODULE_PANEL_X = 12;
+        private final int MODULE_PANEL_WIDTH = 150;
+        private final int SETTINGS_PANEL_X = 172;
+        private final int PANEL_TOP = 62;
+        private final int PANEL_BOTTOM = 18;
 
         @Override
         public void drawScreen(int mouseX, int mouseY, float partialTicks) {
@@ -88,30 +89,30 @@ public class ClickGUI extends Module {
             if (dragging) { windowX = mouseX - dragOffsetX; windowY = mouseY - dragOffsetY; }
 
             if (minimized) {
-                drawSmoothRoundedRect(0, 0, 130, 24, 8, new Color(28, 28, 32, 255).getRGB());
+                drawSmoothRoundedRect(0, 0, 130, 24, 8, new Color(18,18,20,255).getRGB());
                 drawRect(0, 4, 2, 20, ACCENT_WHITE.getRGB());
                 mc.fontRendererObj.drawStringWithShadow("Augustus", 10, 8, TITLE_TEXT.getRGB());
                 super.drawScreen(mouseX, mouseY, partialTicks);
                 return;
             }
 
-            // Shadow (smooth rounded)
-            drawSmoothRoundedRect(windowX + 3, windowY + 3, windowX + w + 3, windowY + h + 3, 12, new Color(0, 0, 0, 100).getRGB());
-            // Main window (smooth rounded)
+            // Shadow
+            drawSmoothRoundedRect(windowX + 4, windowY + 4, windowX + w + 4, windowY + h + 4, 12, new Color(0,0,0,100).getRGB());
+            // Main window with smooth rounded corners
             drawSmoothRoundedRect(windowX, windowY, windowX + w, windowY + h, 12, WINDOW_BG.getRGB());
             drawSmoothRoundedOutline(windowX, windowY, windowX + w, windowY + h, 12, OUTLINE.getRGB());
 
-            // Title bar
+            // Title bar - dark opaque
             drawSmoothRoundedRect(windowX, windowY, windowX + w, windowY + 28, 12, TITLE_BAR.getRGB());
-            drawRect(windowX, windowY + 14, windowX + w, windowY + 28, TITLE_BAR.getRGB());
-            drawRect(windowX + 2, windowY + 4, windowX + 3, windowY + 24, ACCENT_WHITE.getRGB());
+            drawRect(windowX, windowY + 14, windowX + w, windowY + 28, TITLE_BAR.getRGB()); // square bottom of title
+            drawRect(windowX + 2, windowY + 4, windowX + 3, windowY + 24, ACCENT_WHITE.getRGB()); // left accent
 
             GlStateManager.pushMatrix();
             GlStateManager.scale(1.4, 1.4, 1.0);
             mc.fontRendererObj.drawStringWithShadow("Augustus", (windowX + 12) / 1.4f, (windowY + 8) / 1.4f, TITLE_TEXT.getRGB());
             GlStateManager.popMatrix();
 
-            // Window controls
+            // Window controls (white, not colored)
             int cx = windowX + w - 75;
             int cy = windowY + 7;
             drawControlButton(cx, cy, 16, 14, "_", mouseX, mouseY);
@@ -129,11 +130,11 @@ public class ClickGUI extends Module {
                 drawRect(tx, ty, tx + tw, ty + 18, tabColor.getRGB());
                 if (active) drawRect(tx + 4, ty + 17, tx + tw - 4, ty + 18, ACCENT_WHITE.getRGB());
                 int textX = tx + (tw - mc.fontRendererObj.getStringWidth(categoryNames[i])) / 2;
-                mc.fontRendererObj.drawString(categoryNames[i], textX, ty + 5, active ? new Color(255, 255, 255, 255).getRGB() : new Color(130, 130, 136, 255).getRGB());
+                mc.fontRendererObj.drawString(categoryNames[i], textX, ty + 5, active ? new Color(255,255,255,255).getRGB() : new Color(130,130,136,255).getRGB());
                 tx += tw + 4;
             }
 
-            // Scroll input: determine which panel the mouse is over
+            // Scroll handling independent for module and settings
             int dWheel = Mouse.getDWheel();
             if (dWheel != 0) {
                 if (mouseX >= windowX + MODULE_PANEL_X && mouseX <= windowX + MODULE_PANEL_X + MODULE_PANEL_WIDTH) {
@@ -145,7 +146,7 @@ public class ClickGUI extends Module {
                 }
             }
 
-            // Draw module panel
+            // Module panel
             List<Module> modules = getModules(activeTab);
             maxModuleScroll = Math.max(0, modules.size() - 18);
             moduleScrollOffset = Math.min(moduleScrollOffset, maxModuleScroll);
@@ -173,10 +174,9 @@ public class ClickGUI extends Module {
                 moduleY += 14;
             }
 
-            // Draw settings panel
+            // Settings panel
             if (selectedModule != null) {
                 int settingsX = windowX + SETTINGS_PANEL_X;
-                int settingsWidth = w - SETTINGS_PANEL_X - 10;
                 List<Module.Setting> settings = selectedModule.getSettings();
                 maxSettingsScroll = Math.max(0, settings.size() - 20);
                 settingsScrollOffset = Math.min(settingsScrollOffset, maxSettingsScroll);
@@ -190,7 +190,7 @@ public class ClickGUI extends Module {
                     String sv = setting.isSlider() ? String.valueOf(setting.getDoubleValue()) : setting.getValue();
                     mc.fontRendererObj.drawString(sn + ":", settingsX, settingY + 2, SETTING_LABEL.getRGB());
                     int vx = settingsX + mc.fontRendererObj.getStringWidth(sn) + 12;
-                    drawRect(vx - 2, settingY, vx + mc.fontRendererObj.getStringWidth(sv) + 4, settingY + 11, new Color(20, 20, 23, 255).getRGB());
+                    drawRect(vx - 2, settingY, vx + mc.fontRendererObj.getStringWidth(sv) + 4, settingY + 11, new Color(20,20,23,255).getRGB());
                     mc.fontRendererObj.drawString(sv, vx, settingY + 2, setting.isSlider() ? SETTING_VALUE_SLIDER.getRGB() : SETTING_VALUE.getRGB());
                     settingY += 13;
                 }
@@ -198,7 +198,7 @@ public class ClickGUI extends Module {
 
             // Scrollbars
             if (maxModuleScroll > 0) {
-                drawScrollbar(windowX + MODULE_PANEL_X + MODULE_PANEL_WIDTH + 4, windowY + PANEL_TOP, h - PANEL_TOP - PANEL_BOTTOM, moduleScrollOffset, maxModuleScroll);
+                drawScrollbar(windowX + MODULE_PANEL_X + MODULE_PANEL_WIDTH + 6, windowY + PANEL_TOP, h - PANEL_TOP - PANEL_BOTTOM, moduleScrollOffset, maxModuleScroll);
             }
             if (maxSettingsScroll > 0) {
                 drawScrollbar(windowX + w - 8, windowY + PANEL_TOP, h - PANEL_TOP - PANEL_BOTTOM, settingsScrollOffset, maxSettingsScroll);
@@ -213,10 +213,9 @@ public class ClickGUI extends Module {
         }
 
         private void drawScrollbar(int x, int y, int totalHeight, int offset, int maxScroll) {
-            int trackHeight = totalHeight;
-            drawRect(x, y, x + 3, y + trackHeight, SCROLLBAR_TRACK.getRGB());
-            int thumbHeight = Math.max(15, trackHeight / (maxScroll + 1));
-            int thumbY = y + (int)((double)offset / maxScroll * (trackHeight - thumbHeight));
+            drawRect(x, y, x + 3, y + totalHeight, SCROLLBAR_TRACK.getRGB());
+            int thumbHeight = Math.max(15, totalHeight / (maxScroll + 1));
+            int thumbY = y + (int)((double)offset / maxScroll * (totalHeight - thumbHeight));
             drawRect(x, thumbY, x + 3, thumbY + thumbHeight, SCROLLBAR_THUMB.getRGB());
         }
 
@@ -241,10 +240,10 @@ public class ClickGUI extends Module {
             boolean hovered = mx >= x && mx <= x + w && my >= y && my <= y + h;
             drawRect(x, y, x + w, y + h, hovered ? CONTROL_BUTTON_HOVER.getRGB() : CONTROL_BUTTON.getRGB());
             int iconX = x + (w - mc.fontRendererObj.getStringWidth(icon)) / 2;
-            mc.fontRendererObj.drawString(icon, iconX, y + (h - 8) / 2, new Color(255, 255, 255, 255).getRGB());
+            mc.fontRendererObj.drawString(icon, iconX, y + (h - 8) / 2, new Color(255,255,255,255).getRGB());
         }
 
-        // Smooth rounded rectangle using GL_TRIANGLE_FAN for corners
+        // Proper smooth rounded rectangles using triangle fans
         private void drawSmoothRoundedRect(int x1, int y1, int x2, int y2, int radius, int color) {
             if (x2 - x1 < radius * 2 || y2 - y1 < radius * 2) {
                 drawRect(x1, y1, x2, y2, color);
@@ -253,34 +252,34 @@ public class ClickGUI extends Module {
             GlStateManager.enableBlend();
             GlStateManager.disableTexture2D();
             GlStateManager.disableAlpha();
-            GL11.glColor4f(((color >> 16) & 0xFF) / 255f, ((color >> 8) & 0xFF) / 255f, (color & 0xFF) / 255f, ((color >> 24) & 0xFF) / 255f);
+            float a = ((color >> 24) & 0xFF) / 255f;
+            float r = ((color >> 16) & 0xFF) / 255f;
+            float g = ((color >> 8) & 0xFF) / 255f;
+            float b = (color & 0xFF) / 255f;
+            GL11.glColor4f(r, g, b, a);
             GL11.glBegin(GL11.GL_TRIANGLE_FAN);
-            // Top-left corner
             GL11.glVertex2f(x1 + radius, y1 + radius);
             for (int i = 0; i <= 90; i++) {
                 double angle = Math.toRadians(i);
                 GL11.glVertex2f(x1 + radius - (float)(radius * Math.cos(angle)), y1 + radius - (float)(radius * Math.sin(angle)));
             }
-            // Top-right corner
             GL11.glVertex2f(x2 - radius, y1 + radius);
             for (int i = 0; i <= 90; i++) {
                 double angle = Math.toRadians(i);
                 GL11.glVertex2f(x2 - radius + (float)(radius * Math.cos(angle)), y1 + radius - (float)(radius * Math.sin(angle)));
             }
-            // Bottom-right corner
             GL11.glVertex2f(x2 - radius, y2 - radius);
             for (int i = 0; i <= 90; i++) {
                 double angle = Math.toRadians(i);
                 GL11.glVertex2f(x2 - radius + (float)(radius * Math.cos(angle)), y2 - radius + (float)(radius * Math.sin(angle)));
             }
-            // Bottom-left corner
             GL11.glVertex2f(x1 + radius, y2 - radius);
             for (int i = 0; i <= 90; i++) {
                 double angle = Math.toRadians(i);
                 GL11.glVertex2f(x1 + radius - (float)(radius * Math.cos(angle)), y2 - radius + (float)(radius * Math.sin(angle)));
             }
             GL11.glEnd();
-            // Fill middle rectangles
+            // Fill middle
             drawRect(x1 + radius, y1, x2 - radius, y1 + radius, color);
             drawRect(x1 + radius, y2 - radius, x2 - radius, y2, color);
             drawRect(x1, y1 + radius, x1 + radius, y2 - radius, color);
@@ -295,7 +294,11 @@ public class ClickGUI extends Module {
             GlStateManager.enableBlend();
             GlStateManager.disableTexture2D();
             GlStateManager.disableAlpha();
-            GL11.glColor4f(((color >> 16) & 0xFF) / 255f, ((color >> 8) & 0xFF) / 255f, (color & 0xFF) / 255f, ((color >> 24) & 0xFF) / 255f);
+            float a = ((color >> 24) & 0xFF) / 255f;
+            float r = ((color >> 16) & 0xFF) / 255f;
+            float g = ((color >> 8) & 0xFF) / 255f;
+            float b = (color & 0xFF) / 255f;
+            GL11.glColor4f(r, g, b, a);
             GL11.glLineWidth(1.0f);
             GL11.glBegin(GL11.GL_LINE_LOOP);
             for (int i = 0; i <= 90; i++) {
@@ -355,9 +358,7 @@ public class ClickGUI extends Module {
             List<Module> result = new ArrayList<>();
             Module.Category cat = Module.Category.values()[tab];
             for (Module m : AmongusClient.moduleManager.getModules()) {
-                if (m.getCategory() == cat) {
-                    result.add(m);
-                }
+                if (m.getCategory() == cat) result.add(m);
             }
             return result;
         }

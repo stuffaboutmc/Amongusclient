@@ -35,7 +35,7 @@ public class KillAura extends Module {
     private Map<EntityPlayer, Integer> airTicks = new HashMap<>();
     private Map<EntityPlayer, Boolean> swingStates = new HashMap<>();
 
-    public static boolean shouldSuppressSprint = false; // used by Sprint module
+    public static boolean shouldSuppressSprint = false;
 
     public KillAura() {
         super("KillAura", Keyboard.KEY_R, Category.COMBAT, "Attacks entities with extreme customization.");
@@ -51,7 +51,7 @@ public class KillAura extends Module {
         addSetting(new Setting("Range", 3, 8, 6, 0.5));
         addSetting(new Setting("Prioritize", new String[]{"Nearest","LowestHP","HighestHP"}, "Nearest"));
         addSetting(new Setting("TargetPlayers", new String[]{"Off","On"}, "On"));
-        addSetting(new Setting("TargetMobs", new String[]{"Off","On"}, "Off"));
+        addSetting(new Setting("TargetMobs", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("TargetAnimals", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("TargetInvisible", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("Invisibles", new String[]{"Off","On"}, "Off"));
@@ -59,13 +59,12 @@ public class KillAura extends Module {
         addSetting(new Setting("Raycast", new String[]{"None","Basic","Legit","Advanced","Instant"}, "Basic"));
         addSetting(new Setting("SwordOnly", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("Criticals", new String[]{"Off","On"}, "Off"));
-        addSetting(new Setting("FOV", 30, 360, 180, 10));
+        addSetting(new Setting("FOV", 30, 360, 360, 10));  // Changed default to 360
         addSetting(new Setting("SwitchDelay", 0, 1000, 200, 50));
         addSetting(new Setting("IgnoreTeammates", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("MaxTargets", 1, 10, 1, 1));
         addSetting(new Setting("MoveFix", new String[]{"None","Legit","Strict"}, "Legit"));
 
-        // AntiBot
         addSetting(new Setting("AntiBot", new String[]{"Off","Advanced","Custom"}, "Off"));
         addSetting(new Setting("CheckTab", new String[]{"Off","On"}, "On"));
         addSetting(new Setting("CheckName", new String[]{"Off","On"}, "On"));
@@ -254,7 +253,7 @@ public class KillAura extends Module {
             double dist = mc.thePlayer.getDistanceToEntity(entity);
             if (dist > range) continue;
 
-            if (!isInFOV(entity, fov)) continue;
+            if (fov < 360 && !isInFOV(entity, fov)) continue;  // Skip FOV check if 360
 
             if (getSetting("IgnoreTeammates").getValue().equals("On") && entity instanceof EntityPlayer) {
                 EntityPlayer player = (EntityPlayer) entity;

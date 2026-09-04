@@ -20,9 +20,9 @@ public class Scaffold extends Module {
     private int blocksSinceJump = 0;
     private long lastPlaceTime = 0;
     private int prevSlot = -1;
-    private double keepYLevel = 0;
-    private boolean keepYInitialized = false;
     private Random random = new Random();
+
+    public static boolean shouldSuppressSprint = false; // used by Sprint module
 
     public Scaffold() {
         super("Scaffold", Keyboard.KEY_NONE, Category.MOVEMENT, "Places blocks under you with advanced controls.");
@@ -32,8 +32,8 @@ public class Scaffold extends Module {
         addSetting(new Setting("CustomAcceleration", 0.0, 1.0, 0.4, 0.01));
         addSetting(new Setting("CustomNoiseYaw", 0.0, 2.0, 0.4, 0.05));
         addSetting(new Setting("CustomNoisePitch", 0.0, 1.0, 0.2, 0.05));
-        addSetting(new Setting("Silent", new String[]{"Off","On"}, "Off")); // NEW: Silent toggle
-        addSetting(new Setting("MoveFix", new String[]{"None","Silent","Strict"}, "Silent"));
+        addSetting(new Setting("Silent", new String[]{"Off","On"}, "Off"));
+        addSetting(new Setting("MoveFix", new String[]{"None","Legit","Strict"}, "Legit"));
         addSetting(new Setting("Tower", new String[]{"Off","On"}, "Off"));
         addSetting(new Setting("PlaceDelay", 0, 500, 0, 10));
         addSetting(new Setting("AutoJump", new String[]{"Off","On"}, "Off"));
@@ -49,7 +49,10 @@ public class Scaffold extends Module {
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
         if (event.entity != mc.thePlayer) return;
         String mode = getSetting("Mode").getValue();
-        if (mode.equals("None")) return;
+        if (mode.equals("None")) {
+            shouldSuppressSprint = false;
+            return;
+        }
 
         // Rotation mode and custom params
         RotationUtils.rotationMode = getSetting("Rotation").getValue();
@@ -61,37 +64,10 @@ public class Scaffold extends Module {
         }
         RotationUtils.silentRotations = getSetting("Silent").getValue().equals("On");
 
-        // KeepY initialization
-        if (getSetting("KeepY").getValue().equals("On")) {
-            if (!keepYInitialized) {
-                keepYLevel = Math.floor(mc.thePlayer.posY);
-                keepYInitialized = true;
-            }
-        } else {
-            keepYInitialized = false;
-        }
-
-        // AutoJump with KeepY suppression
+        // AutoJump works (KeepY no longer interferes)
         if (getSetting("AutoJump").getValue().equals("On")) {
             if (mc.thePlayer.onGround && mc.thePlayer.moveForward > 0 && !mc.thePlayer.isSneaking()) {
-                if (!getSetting("KeepY").getValue().equals("On")) {
-                    mc.thePlayer.jump();
-                }
-            }
-        }
-
-        // KeepY: strict Y control
-        if (getSetting("KeepY").getValue().equals("On")) {
-            double currentY = mc.thePlayer.posY;
-            if (currentY > keepYLevel) {
-                mc.thePlayer.motionY = -0.3;
-            } else if (currentY < keepYLevel) {
-                mc.thePlayer.motionY = 0.1;
-            } else {
-                mc.thePlayer.motionY = 0;
-            }
-            if (mc.thePlayer.posY >= keepYLevel && mc.thePlayer.motionY > 0) {
-                mc.thePlayer.motionY = 0;
+                mc.thePlayer.jump();
             }
         }
 
@@ -112,6 +88,8 @@ public class Scaffold extends Module {
                     dz = -dz;
                 }
                 below = new BlockPos(mc.thePlayer.posX + dx, mc.thePlayer.posY - 1, mc.thePlayer.posZ + dz);
+            } else {
+                below = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
             }
         }
 
@@ -130,27 +108,27 @@ public class Scaffold extends Module {
                 if (mode.equals("Godbridge")) {
                     blocksSinceJump++;
                     if (blocksSinceJump >= 9) {
-                        if (!getSetting("KeepY").getValue().equals("On")) {
-                            mc.thePlayer.jump();
-                        }
+                        mc.thePlayer.jump();
                         blocksSinceJump = 0;
                         return;
                     }
                 }
 
                 if (mode.equals("Tower") && getSetting("Tower").getValue().equals("On") && mode.equals("Normal")) {
-                    if (!getSetting("KeepY").getValue().equals("On")) {
-                        mc.thePlayer.motionY = 0.42;
-                    }
+                    mc.thePlayer.motionY = 0.42;
                     mc.thePlayer.motionX = 0;
                     mc.thePlayer.motionZ = 0;
                 }
 
-                // Rotate with applyRotations (respects Silent)
+                // Rotate humanized
                 float[] rotations = RotationUtils.getRotations(new Vec3(below.getX() + 0.5, below.getY() + 0.5, below.getZ() + 0.5));
                 RotationUtils.applyRotations(rotations[0], rotations[1]);
 
                 long baseDelay = (long) getSetting("PlaceDelay").getDoubleValue();
+                // If KeepY enabled, add extra delay to allow natural jumps and maintain Y
+                if (getSetting("KeepY").getValue().equals("On")) {
+                    baseDelay += 100; // extra 100ms
+                }
                 long jitter = (long) (random.nextGaussian() * 25);
                 long actualDelay = Math.max(0, baseDelay + jitter);
                 if (System.currentTimeMillis() - lastPlaceTime >= actualDelay) {
@@ -169,21 +147,24 @@ public class Scaffold extends Module {
 
         // MoveFix
         String moveFix = getSetting("MoveFix").getValue();
-        if (moveFix.equals("Silent")) {
-            boolean canSprint = mc.thePlayer.moveForward > 0 &&
-                                !mc.thePlayer.isSneaking() &&
-                                !mc.thePlayer.isCollidedHorizontally &&
-                                !needsPlacement;
-            mc.thePlayer.setSprinting(canSprint);
-            if (needsPlacement) {
-                mc.thePlayer.motionX *= 0.75;
-                mc.thePlayer.motionZ *= 0.75;
+        shouldSuppressSprint = false;
+        if (moveFix.equals("Legit")) {
+            boolean allowedToSprint = mc.thePlayer.moveForward > 0 &&
+                                      !mc.thePlayer.isSneaking() &&
+                                      !mc.thePlayer.isCollidedHorizontally &&
+                                      !needsPlacement;
+            if (allowedToSprint) {
+                mc.thePlayer.setSprinting(true);
+            } else {
+                mc.thePlayer.setSprinting(false);
+                shouldSuppressSprint = true;
             }
         } else if (moveFix.equals("Strict")) {
             mc.thePlayer.setSprinting(false);
+            shouldSuppressSprint = true;
             if (needsPlacement) {
-                mc.thePlayer.motionX *= 0.45;
-                mc.thePlayer.motionZ *= 0.45;
+                mc.thePlayer.motionX *= 0.6;
+                mc.thePlayer.motionZ *= 0.6;
             }
         }
     }
@@ -255,11 +236,11 @@ public class Scaffold extends Module {
     @Override
     public void onDisable() {
         super.onDisable();
+        shouldSuppressSprint = false;
         if (prevSlot != -1) {
             mc.thePlayer.inventory.currentItem = prevSlot;
             prevSlot = -1;
         }
         blocksSinceJump = 0;
-        keepYInitialized = false;
     }
 }

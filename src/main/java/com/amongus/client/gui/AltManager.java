@@ -1,6 +1,7 @@
 package com.amongus.client.gui;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.Session;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -15,6 +16,7 @@ public class AltManager {
     private static Minecraft mc = Minecraft.getMinecraft();
     private static List<Alt> alts = new ArrayList<>();
     private static File altFile;
+    private static String lastStatus = "";
 
     public static class Alt {
         public String name;
@@ -68,17 +70,29 @@ public class AltManager {
     public static void addAlt(String name, String email, String password) {
         alts.add(new Alt(name, email, password));
         saveAlts();
+        setStatus("Added alt: " + name);
     }
 
     public static void addTokenAlt(String name, String token) {
         alts.add(new Alt(name, token, true));
         saveAlts();
+        setStatus("Added token alt: " + name);
     }
 
     public static void removeAlt(int index) {
         if (index >= 0 && index < alts.size()) {
+            String name = alts.get(index).name;
             alts.remove(index);
             saveAlts();
+            setStatus("Removed alt: " + name);
+        }
+    }
+
+    public static void renameAlt(int index, String newName) {
+        if (index >= 0 && index < alts.size()) {
+            alts.get(index).name = newName;
+            saveAlts();
+            setStatus("Renamed to: " + newName);
         }
     }
 
@@ -88,23 +102,49 @@ public class AltManager {
             if (alt.isTokenAlt) {
                 session = new Session(alt.name, alt.token, "legacy", "legacy");
             } else {
+                // Offline login - use name only
                 session = new Session(alt.name, "offline", "offline", "offline");
             }
             setSession(session);
-        } catch (Exception e) {}
+            setStatus("Logged in as: " + alt.name);
+        } catch (Exception e) {
+            setStatus("Login failed!");
+            e.printStackTrace();
+        }
     }
 
     public static void loginOffline(String name) {
         try {
             setSession(new Session(name, "offline", "offline", "offline"));
-        } catch (Exception e) {}
+            setStatus("Logged in offline as: " + name);
+        } catch (Exception e) {
+            setStatus("Offline login failed!");
+            e.printStackTrace();
+        }
     }
 
     private static void setSession(Session session) throws Exception {
-        Field f = Minecraft.class.getDeclaredField("session");
-        f.setAccessible(true);
-        f.set(mc, session);
+        Field sessionField = null;
+        try {
+            sessionField = Minecraft.class.getDeclaredField("session");
+        } catch (NoSuchFieldException e) {
+            // Try obfuscated name
+            sessionField = Minecraft.class.getDeclaredField("field_71449_j");
+        }
+        sessionField.setAccessible(true);
+        sessionField.set(mc, session);
     }
 
     public static List<Alt> getAlts() { return alts; }
+
+    public static String getStatus() {
+        return lastStatus;
+    }
+
+    public static void setStatus(String message) {
+        lastStatus = message;
+        if (mc.thePlayer != null) {
+            mc.thePlayer.addChatMessage(new ChatComponentText("§a[AltManager] §f" + message));
+        }
+    }
 }

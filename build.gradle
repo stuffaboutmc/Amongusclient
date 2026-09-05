@@ -33,19 +33,21 @@ dependencies {
 }
 
 jar {
+    // Include dependency class files (but not their META-INF or other resources)
+    from {
+        configurations.compile.collect { 
+            zipTree(it).matching { 
+                include '**/*.class' 
+            } 
+        }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
                    'Can-Retransform-Classes': 'true',
                    'Can-Redefine-Classes': 'true',
-                   'Implementation-Title': 'among us client Premium',
-                   'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
+                   'Implementation-Title': 'among us client Premium'
     }
 }
-
-// Copy dependencies to build/libs so they are placed alongside the mod jar
-task copyDependencies(type: Copy) {
-    from configurations.compile
-    into 'build/libs'
-}
-build.dependsOn copyDependencies

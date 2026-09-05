@@ -21,3 +21,9 @@ jobs:
 
       - name: Build with Gradle
         run: gradle build
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: among-us-client-Premium
+          path: build/libs/*.jar

@@ -1,20 +1,15 @@
-package myau.client.modules.movement;
+package myau.client.module.impl;
 
 import myau.client.module.Module;
 import myau.client.settings.Setting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
-import net.minecraft.util.Vec3;
-import net.minecraft.block.Block;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 
 public class Scaffold extends Module {
 
-    private Setting mode;
-    private Setting range;
-    private Setting swing;
+    private Setting mode, range, swing;
 
     public Scaffold() {
         super("Scaffold", "Movement");
@@ -33,23 +28,18 @@ public class Scaffold extends Module {
     @Override
     public void onUpdate() {
         if (mc.thePlayer == null || mc.theWorld == null) return;
-        if (!isEnabled()) return;
 
-        // Get the block to place under the player
         BlockPos pos = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY - 1, mc.thePlayer.posZ);
         if (mc.theWorld.isAirBlock(pos)) {
-            // Find the best block in hotbar
             int slot = getBlockSlot();
             if (slot == -1) return;
 
-            // Place block
             EnumFacing side = getPlaceSide(pos);
             if (side == null) return;
 
             int oldSlot = mc.thePlayer.inventory.currentItem;
             mc.thePlayer.inventory.currentItem = slot;
 
-            // Place block using clickBlock (fixed from func_178890_a)
             mc.playerController.clickBlock(pos, side);
             if (swing.getBooleanValue()) {
                 mc.thePlayer.swingItem();
@@ -77,10 +67,5 @@ public class Scaffold extends Module {
             }
         }
         return null;
-    }
-
-    @Override
-    public void onDisable() {
-        // optional cleanup
     }
 }

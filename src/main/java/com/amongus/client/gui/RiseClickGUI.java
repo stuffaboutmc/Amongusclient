@@ -1,6 +1,7 @@
 package com.amongus.client.gui;
 
 import com.amongus.client.ModuleManager;
+import com.amongus.client.modules.ClickGUIModule;
 import com.amongus.client.modules.Module;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
@@ -14,10 +15,11 @@ import java.util.*;
 
 public class RiseClickGUI extends GuiScreen {
 
-    // ---------- Style enum ----------
-    public enum Style { RISE, VAPE, AUGUSTUS, PRESTIGE }
+    // ---------- Get style from ClickGUIModule ----------
+    private ClickGUIModule.Style getStyle() {
+        return ClickGUIModule.getCurrentStyle();
+    }
 
-    private Style currentStyle = Style.RISE;
     private boolean dragging = false;
     private int dragX, dragY;
     private int windowX = 100, windowY = 100;
@@ -26,17 +28,12 @@ public class RiseClickGUI extends GuiScreen {
     private final int cardHeight = 30;
     private Module selectedModule = null;
 
-    // Context menu for styles
-    private boolean styleMenuOpen = false;
-    private int styleMenuX, styleMenuY;
-    private final int styleMenuWidth = 100, styleMenuItemHeight = 20;
-
-    // ---------- Rendering ----------
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         drawDefaultBackground();
         GlStateManager.enableBlend();
 
+        ClickGUIModule.Style currentStyle = getStyle();
         int w = windowWidth, h = windowHeight;
         int bgColor, borderColor, headerColor, accentColor;
         switch (currentStyle) {
@@ -72,15 +69,12 @@ public class RiseClickGUI extends GuiScreen {
         drawRect(windowX, windowY, windowX + w, windowY + h, bgColor);
         drawRect(windowX, windowY, windowX + w, windowY + 1, borderColor);
 
-        // Header
+        // Header – lowercase style name
         drawRect(windowX, windowY, windowX + w, windowY + 22, headerColor);
-        mc.fontRendererObj.drawStringWithShadow(currentStyle.name() + " ClickGUI", windowX + 6, windowY + 7, 0xFFFFFF);
-
-        // Gear icon for style menu (left-click to open)
-        int gearX = windowX + w - 22;
-        int gearY = windowY + 2;
-        drawRect(gearX, gearY, gearX + 18, gearY + 18, 0xFF444444);
-        mc.fontRendererObj.drawStringWithShadow("⚙", gearX + 3, gearY + 2, 0xFFFFFF);
+        mc.fontRendererObj.drawStringWithShadow(
+                currentStyle.getDisplayName() + " clickgui",
+                windowX + 6, windowY + 7, 0xFFFFFF
+        );
 
         // Module list
         List<Module> sorted = new ArrayList<>(ModuleManager.modules);
@@ -95,24 +89,21 @@ public class RiseClickGUI extends GuiScreen {
             int yPos = startY + i * cardHeight - (int) scrollOffset;
             if (yPos + cardHeight < startY || yPos > windowY + h) continue;
 
-            // Card background
             int cardColor = mod.isEnabled() ? accentColor | 0x66000000 : 0xFF222222;
-            if (currentStyle == Style.AUGUSTUS) {
+            if (currentStyle == ClickGUIModule.Style.AUGUSTUS) {
                 cardColor = mod.isEnabled() ? 0xAA2A1A3A : 0xFF16101C;
             }
             drawRect(windowX + 2, yPos, windowX + w - 2, yPos + cardHeight, cardColor);
 
-            // Style decoration
-            if (currentStyle == Style.AUGUSTUS && mod.isEnabled()) {
+            if (currentStyle == ClickGUIModule.Style.AUGUSTUS && mod.isEnabled()) {
                 drawRect(windowX + 2, yPos, windowX + 4, yPos + cardHeight, accentColor);
             }
-            if (currentStyle == Style.PRESTIGE && mod.isEnabled()) {
+            if (currentStyle == ClickGUIModule.Style.PRESTIGE && mod.isEnabled()) {
                 drawRect(windowX + 2, yPos, windowX + 3, yPos + cardHeight, accentColor);
             }
 
-            // Module name
             int textColor = mod.isEnabled() ? 0xFFFFFF : 0xAAAAAA;
-            if (currentStyle == Style.PRESTIGE) textColor = 0xD9D9D9;
+            if (currentStyle == ClickGUIModule.Style.PRESTIGE) textColor = 0xD9D9D9;
             mc.fontRendererObj.drawStringWithShadow(mod.getName(), windowX + 8, yPos + 8, textColor);
 
             // Keybind badge
@@ -124,8 +115,8 @@ public class RiseClickGUI extends GuiScreen {
                 mc.fontRendererObj.drawStringWithShadow(keyName, windowX + w - 48 - kw, yPos + 8, 0xFFFFFF);
             }
 
-            // Toggle button (left-click)
-            if (currentStyle == Style.VAPE) {
+            // Toggle button
+            if (currentStyle == ClickGUIModule.Style.VAPE) {
                 drawRect(windowX + w - 30, yPos + 8, windowX + w - 20, yPos + 18, mod.isEnabled() ? accentColor : 0xFF555555);
                 if (mod.isEnabled()) mc.fontRendererObj.drawStringWithShadow("✓", windowX + w - 27, yPos + 8, 0xFFFFFF);
             } else {
@@ -150,34 +141,12 @@ public class RiseClickGUI extends GuiScreen {
             drawRect(windowX + w - 6, barY, windowX + w - 2, barY + barHeight, 0x66FFFFFF);
         }
 
-        // Expanded settings (if module selected)
+        // Expanded settings
         if (selectedModule != null && hasProperties(selectedModule)) {
             drawExpandedEditor(selectedModule, mouseX, mouseY);
         }
 
-        // Style menu
-        if (styleMenuOpen) {
-            drawStyleMenu();
-        }
-
         super.drawScreen(mouseX, mouseY, partialTicks);
-    }
-
-    // ---------- Style menu ----------
-    private void drawStyleMenu() {
-        int x = styleMenuX;
-        int y = styleMenuY;
-        int w = styleMenuWidth;
-        int h = Style.values().length * styleMenuItemHeight + 4;
-        drawRect(x, y, x + w, y + h, 0xCC000000);
-        drawRect(x, y, x + w, y + 1, 0xFFFFFFFF);
-
-        for (int i = 0; i < Style.values().length; i++) {
-            int itemY = y + 2 + i * styleMenuItemHeight;
-            int color = currentStyle == Style.values()[i] ? 0xFF00AA00 : 0x00000000;
-            drawRect(x + 2, itemY, x + w - 2, itemY + styleMenuItemHeight, color);
-            mc.fontRendererObj.drawStringWithShadow(Style.values()[i].name(), x + 6, itemY + 4, 0xFFFFFF);
-        }
     }
 
     // ---------- Mouse handling ----------
@@ -185,40 +154,12 @@ public class RiseClickGUI extends GuiScreen {
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         super.mouseClicked(mouseX, mouseY, mouseButton);
 
-        // If style menu is open, handle clicks
-        if (styleMenuOpen) {
-            if (mouseX >= styleMenuX && mouseX <= styleMenuX + styleMenuWidth &&
-                mouseY >= styleMenuY && mouseY <= styleMenuY + Style.values().length * styleMenuItemHeight + 4) {
-                int idx = (mouseY - styleMenuY - 2) / styleMenuItemHeight;
-                if (idx >= 0 && idx < Style.values().length) {
-                    currentStyle = Style.values()[idx];
-                    styleMenuOpen = false;
-                    return;
-                }
-            } else {
-                styleMenuOpen = false;
-                return;
-            }
-        }
-
-        // Dragging (left-click on header)
-        if (mouseButton == 0) {
-            if (mouseX >= windowX && mouseX <= windowX + windowWidth && mouseY >= windowY && mouseY <= windowY + 22) {
-                dragging = true;
-                dragX = mouseX - windowX;
-                dragY = mouseY - windowY;
-                return;
-            }
-
-            // Gear icon (left-click -> open style menu)
-            int gearX = windowX + windowWidth - 22;
-            int gearY = windowY + 2;
-            if (mouseX >= gearX && mouseX <= gearX + 18 && mouseY >= gearY && mouseY <= gearY + 18) {
-                styleMenuOpen = !styleMenuOpen;
-                styleMenuX = gearX;
-                styleMenuY = gearY + 20;
-                return;
-            }
+        // Drag header (left-click only)
+        if (mouseButton == 0 && mouseX >= windowX && mouseX <= windowX + windowWidth && mouseY >= windowY && mouseY <= windowY + 22) {
+            dragging = true;
+            dragX = mouseX - windowX;
+            dragY = mouseY - windowY;
+            return;
         }
 
         // Module interactions
@@ -229,10 +170,10 @@ public class RiseClickGUI extends GuiScreen {
             int yPos = windowY + 24 + i * cardHeight - (int) scrollOffset;
             if (yPos + cardHeight < windowY + 24 || yPos > windowY + windowHeight) continue;
 
-            // Left-click: toggle only on the toggle button
+            // Left-click: toggle only on toggle button
             if (mouseButton == 0) {
                 int toggleX, toggleW = 30;
-                if (currentStyle == Style.VAPE) toggleX = windowX + windowWidth - 30;
+                if (getStyle() == ClickGUIModule.Style.VAPE) toggleX = windowX + windowWidth - 30;
                 else toggleX = windowX + windowWidth - 40;
                 int toggleY = yPos + 6;
                 if (mouseX >= toggleX && mouseX <= toggleX + toggleW && mouseY >= toggleY && mouseY <= toggleY + 18) {
@@ -241,52 +182,23 @@ public class RiseClickGUI extends GuiScreen {
                 }
             }
 
-            // Right-click: expand settings on the card (anywhere except toggle area)
+            // Right-click: expand/collapse settings (anywhere on card)
             if (mouseButton == 1) {
-                int toggleX, toggleW = 30;
-                if (currentStyle == Style.VAPE) toggleX = windowX + windowWidth - 30;
-                else toggleX = windowX + windowWidth - 40;
-                int toggleY = yPos + 6;
-                // Avoid expanding if right-click on toggle area
-                if (mouseX >= toggleX && mouseX <= toggleX + toggleW && mouseY >= toggleY && mouseY <= toggleY + 18) {
-                    // Do nothing – toggle is left-click only
-                } else if (mouseX >= windowX + 2 && mouseX <= windowX + windowWidth - 2 && mouseY >= yPos && mouseY <= yPos + cardHeight) {
+                if (mouseX >= windowX + 2 && mouseX <= windowX + windowWidth - 2 && mouseY >= yPos && mouseY <= yPos + cardHeight) {
                     if (selectedModule == mod) {
                         selectedModule = null;
-                    } else {
-                        if (hasProperties(mod)) {
-                            selectedModule = mod;
-                        } else {
-                            // No properties, maybe show a message (optional)
-                        }
+                    } else if (hasProperties(mod)) {
+                        selectedModule = mod;
                     }
                     return;
                 }
             }
 
-            // Middle-click: set keybind
+            // Middle-click: keybind
             if (mouseButton == 2) {
                 if (mouseX >= windowX + 2 && mouseX <= windowX + windowWidth - 2 && mouseY >= yPos && mouseY <= yPos + cardHeight) {
-                    selectedModule = mod; // keep selection
                     mc.displayGuiScreen(new KeybindScreen(mod));
                     return;
-                }
-            }
-        }
-
-        // Right-click on empty space (background) to open style menu (optional)
-        if (mouseButton == 1) {
-            if (mouseX >= windowX && mouseX <= windowX + windowWidth && mouseY >= windowY && mouseY <= windowY + windowHeight) {
-                // Check if we are not on a module card
-                boolean onCard = false;
-                for (Module mod : sorted) {
-                    int yPos = windowY + 24 + sorted.indexOf(mod) * cardHeight - (int) scrollOffset;
-                    if (mouseY >= yPos && mouseY <= yPos + cardHeight) { onCard = true; break; }
-                }
-                if (!onCard) {
-                    styleMenuOpen = !styleMenuOpen;
-                    styleMenuX = mouseX;
-                    styleMenuY = mouseY;
                 }
             }
         }
@@ -327,10 +239,7 @@ public class RiseClickGUI extends GuiScreen {
     // ---------- Keybind screen ----------
     private class KeybindScreen extends GuiScreen {
         private final Module module;
-
-        public KeybindScreen(Module mod) {
-            this.module = mod;
-        }
+        public KeybindScreen(Module mod) { this.module = mod; }
 
         @Override
         public void drawScreen(int mouseX, int mouseY, float partialTicks) {

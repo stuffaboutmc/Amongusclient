@@ -43,14 +43,13 @@ jar {
     }
 }
 
-// Copy dependencies to build/libs so they are placed alongside the mod jar
+// Copy dependencies to build/libs
 task copyDeps(type: Copy) {
     from configurations.compile
     into 'build/libs'
 }
-build.dependsOn copyDeps
 
-// Create a distribution zip that bundles the mod jar and all dependency jars
+// Create distribution zip (depends on jar and copyDeps, not on build)
 task distZip(type: Zip) {
     baseName = 'among-us-client-bundle'
     destinationDir = file('build/libs')
@@ -58,8 +57,8 @@ task distZip(type: Zip) {
         include '*.jar'
         exclude 'among-us-client-bundle.zip'
     }
-    dependsOn build
+    dependsOn jar, copyDeps   // no cycle
 }
 
-// Make the default build task also produce the distribution zip
+// Make the default build task produce the distribution zip
 build.dependsOn distZip

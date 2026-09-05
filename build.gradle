@@ -6,7 +6,7 @@ buildscript {
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
-        classpath 'com.github.jengelman.gradle.plugins:shadow:5.2.0'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'   // compatible with Gradle 4
     }
 }
 apply plugin: 'net.minecraftforge.gradle.forge'
@@ -36,8 +36,8 @@ dependencies {
 }
 
 shadowJar {
-    classifier = null   // removes "-all" suffix, outputs directly
-    // Exclude duplicate files that break reobfJar
+    classifier = null   // replaces the default jar with the fat jar
+    // Exclude duplicate files that break reobf
     exclude 'dummyThing'
     exclude 'META-INF/AL2.0'
     exclude 'META-INF/LGPL2.1'
@@ -57,12 +57,10 @@ shadowJar {
     }
 }
 
-// Reobfuscate the shadow jar instead of the default jar
+// Reobfuscate the shadow jar (ForgeGradle will automatically find it)
 reobf {
-    shadowJar {
-        // uses default mapping type 'SEARGE'
-    }
+    shadowJar {}
 }
 
-// Make the default build task produce the reobfuscated shadow jar
+// Ensure the build task produces the reobfuscated shadow jar
 tasks.build.dependsOn reobfShadowJar

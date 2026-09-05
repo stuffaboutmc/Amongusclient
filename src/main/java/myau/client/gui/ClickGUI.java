@@ -43,13 +43,12 @@ public class ClickGUI extends GuiScreen {
         if (CustomFont.TITLE == null) {
             CustomFont.init();
         }
-        // CRITICAL: do not reset scroll or selection here
-        // that's what was causing the grey rectangle — the list was empty on init
+        // CRITICAL FIX: do not reset scroll or selection
+        // list stays populated, no grey rectangle
         if (modules.isEmpty()) {
             modules = Client.instance.moduleManager.getModules();
             modules.sort(Comparator.comparing(Module::getName));
         }
-        // ensure settings panel closes on reopen
         showSettings = false;
         selectedModule = null;
     }
@@ -59,7 +58,7 @@ public class ClickGUI extends GuiScreen {
         GlStateManager.pushMatrix();
         GlStateManager.translate(guiX, guiY, 0);
 
-        // background — semi-transparent dark
+        // background
         drawRect(0, 0, guiWidth, guiHeight, new Color(20, 20, 20, 220).getRGB());
         drawRect(0, 0, guiWidth, 20, new Color(30, 30, 30, 255).getRGB());
 
@@ -114,7 +113,6 @@ public class ClickGUI extends GuiScreen {
                 fontRendererObj.drawString(m.getName(), x + 6, yOffset + 4, 0xFFFFFF);
             }
 
-            // hover highlight
             if (mouseX > guiX + x && mouseX < guiX + x + w &&
                 mouseY > guiY + yOffset && mouseY < guiY + yOffset + h) {
                 drawRect(x, yOffset, x + w, yOffset + h, new Color(255, 255, 255, 40).getRGB());
@@ -127,7 +125,6 @@ public class ClickGUI extends GuiScreen {
     }
 
     private void drawSettingsPanel(int mouseX, int mouseY, float partialTicks) {
-        // panel on the right of main gui
         int panelX = guiWidth + 4;
         int panelY = 24;
         int pw = settingsWidth;
@@ -192,14 +189,12 @@ public class ClickGUI extends GuiScreen {
         int relX = mouseX - guiX;
         int relY = mouseY - guiY;
 
-        // close button
         if (relX > guiWidth - 20 && relX < guiWidth - 4 && relY > 2 && relY < 18) {
             close();
             return;
         }
 
         if (showSettings && selectedModule != null) {
-            // handle settings clicks
             int panelX = guiWidth + 4;
             int y = 26;
             for (Setting s : selectedModule.getSettings()) {
@@ -213,7 +208,6 @@ public class ClickGUI extends GuiScreen {
                 } else if (s.isSlider()) {
                     if (mouseX > guiX + panelX + 4 && mouseX < guiX + panelX + 150 &&
                         mouseY > guiY + y && mouseY < guiY + y + 22) {
-                        // slider click
                         float percent = (float) (mouseX - (guiX + panelX + 8)) / 130f;
                         float val = s.getMin() + percent * (s.getMax() - s.getMin());
                         s.setValue(Math.round(val / s.getInc()) * s.getInc());
@@ -232,7 +226,6 @@ public class ClickGUI extends GuiScreen {
             return;
         }
 
-        // module list click
         int yOffset = 24 - scrollOffset;
         for (Module m : modules) {
             if (yOffset < 0 || yOffset > guiHeight - 30) {
@@ -277,11 +270,11 @@ public class ClickGUI extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
-        if (keyCode == 1) { // ESC
+        if (keyCode == 1) {
             close();
             return;
         }
-        if (keyCode == 0x9) { // TAB
+        if (keyCode == 0x9) {
             showSettings = false;
             selectedModule = null;
             return;
@@ -301,7 +294,6 @@ public class ClickGUI extends GuiScreen {
         return false;
     }
 
-    // compat method to toggle from keybind
     public void toggleVisibility() {
         if (Minecraft.getMinecraft().currentScreen == this) {
             close();

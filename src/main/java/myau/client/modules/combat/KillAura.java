@@ -1,8 +1,7 @@
-package com.stuffaboutmc.client.module.impl;
+package myau.client.module.impl;
 
-import com.stuffaboutmc.client.module.Module;
-import com.stuffaboutmc.client.settings.Setting;
-import net.minecraft.client.Minecraft;
+import myau.client.module.Module;
+import myau.client.settings.Setting;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 
@@ -19,11 +18,11 @@ public class KillAura extends Module {
     }
 
     @Override
-    public void onTick() {
-        for (Entity e : Minecraft.getMinecraft().theWorld.loadedEntityList) {
-            if (e instanceof EntityPlayer && e != Minecraft.getMinecraft().thePlayer) {
-                if (Minecraft.getMinecraft().thePlayer.getDistanceToEntity(e) < 4.0) {
-                    Minecraft.getMinecraft().playerController.attackEntity(Minecraft.getMinecraft().thePlayer, e);
+    public void onUpdate() {
+        for (Entity e : mc.theWorld.loadedEntityList) {
+            if (e instanceof EntityPlayer && e != mc.thePlayer) {
+                if (mc.thePlayer.getDistanceToEntity(e) < 4.0) {
+                    mc.playerController.attackEntity(mc.thePlayer, e);
                 }
             }
         }

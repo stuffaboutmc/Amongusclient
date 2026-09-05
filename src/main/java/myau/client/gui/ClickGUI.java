@@ -1,9 +1,9 @@
-package com.stuffaboutmc.client.gui;
+package myau.client.gui;
 
-import com.stuffaboutmc.client.Client;
-import com.stuffaboutmc.client.font.CustomFont;
-import com.stuffaboutmc.client.module.Module;
-import com.stuffaboutmc.client.settings.Setting;
+import myau.client.module.Module;
+import myau.client.settings.Setting;
+import myau.client.font.CustomFont;
+import myau.client.core.ModuleManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
@@ -19,19 +19,16 @@ public class ClickGUI extends GuiScreen {
 
     public static ClickGUI instance;
     private ArrayList<Module> modules = new ArrayList<>();
-    private boolean dragging = false;
-    private int dragX, dragY;
     private int guiX = 100, guiY = 50;
     private int guiWidth = 300, guiHeight = 400;
     private int scrollOffset = 0;
     private Module selectedModule = null;
     private boolean showSettings = false;
-    private int settingsX, settingsY;
     private int settingsWidth = 200, settingsHeight = 250;
 
     public ClickGUI() {
         instance = this;
-        modules = Client.instance.moduleManager.getModules();
+        modules = ModuleManager.getModules();
         modules.sort(Comparator.comparing(Module::getName));
         guiX = (Minecraft.getMinecraft().displayWidth / 2) - (guiWidth / 2);
         guiY = (Minecraft.getMinecraft().displayHeight / 2) - (guiHeight / 2);
@@ -40,13 +37,9 @@ public class ClickGUI extends GuiScreen {
     @Override
     public void initGui() {
         super.initGui();
-        if (CustomFont.TITLE == null) {
-            CustomFont.init();
-        }
-        // CRITICAL FIX: do not reset scroll or selection
-        // list stays populated, no grey rectangle
+        if (CustomFont.TITLE == null) CustomFont.init();
         if (modules.isEmpty()) {
-            modules = Client.instance.moduleManager.getModules();
+            modules = ModuleManager.getModules();
             modules.sort(Comparator.comparing(Module::getName));
         }
         showSettings = false;
@@ -58,18 +51,15 @@ public class ClickGUI extends GuiScreen {
         GlStateManager.pushMatrix();
         GlStateManager.translate(guiX, guiY, 0);
 
-        // background
         drawRect(0, 0, guiWidth, guiHeight, new Color(20, 20, 20, 220).getRGB());
         drawRect(0, 0, guiWidth, 20, new Color(30, 30, 30, 255).getRGB());
 
-        // title
         if (CustomFont.TITLE != null) {
             CustomFont.TITLE.drawString("VANTA", 8, 4, 0xFFFFFF);
         } else {
             fontRendererObj.drawString("VANTA", 8, 4, 0xFFFFFF);
         }
 
-        // close button
         int closeX = guiWidth - 20;
         drawRect(closeX, 2, closeX + 16, 18, new Color(200, 40, 40, 200).getRGB());
         fontRendererObj.drawString("X", closeX + 4, 4, 0xFFFFFF);
@@ -86,7 +76,6 @@ public class ClickGUI extends GuiScreen {
 
     private void drawModuleList(int mouseX, int mouseY, float partialTicks) {
         int yOffset = 24 - scrollOffset;
-        int maxY = guiHeight - 10;
 
         GL11.glEnable(GL11.GL_SCISSOR_TEST);
         int scale = Minecraft.getMinecraft().gameSettings.guiScale;
@@ -155,31 +144,27 @@ public class ClickGUI extends GuiScreen {
     }
 
     private void drawBooleanSetting(Setting s, int x, int y, int mouseX, int mouseY) {
-        String label = s.getName();
-        boolean value = s.getBooleanValue();
         drawRect(x + 4, y, x + 150, y + 18, new Color(30, 30, 30, 200).getRGB());
-        fontRendererObj.drawString(label, x + 8, y + 4, 0xCCCCCC);
+        fontRendererObj.drawString(s.getName(), x + 8, y + 4, 0xCCCCCC);
+        boolean value = s.getBooleanValue();
         drawRect(x + 130, y + 3, x + 146, y + 15, value ? new Color(60, 200, 60).getRGB() : new Color(200, 60, 60).getRGB());
     }
 
     private void drawSliderSetting(Setting s, int x, int y, int mouseX, int mouseY) {
-        String label = s.getName() + ": " + String.format("%.1f", s.getValue());
         drawRect(x + 4, y, x + 150, y + 22, new Color(30, 30, 30, 200).getRGB());
-        fontRendererObj.drawString(label, x + 8, y + 4, 0xCCCCCC);
+        fontRendererObj.drawString(s.getName() + ": " + String.format("%.1f", s.getValue()), x + 8, y + 4, 0xCCCCCC);
         int sliderX = x + 8;
         int sliderY = y + 16;
         int sliderW = 130;
         int sliderH = 4;
         drawRect(sliderX, sliderY, sliderX + sliderW, sliderY + sliderH, new Color(80, 80, 80).getRGB());
         float percent = (float) ((s.getValue() - s.getMin()) / (s.getMax() - s.getMin()));
-        int fill = (int) (sliderW * percent);
-        drawRect(sliderX, sliderY, sliderX + fill, sliderY + sliderH, new Color(80, 180, 255).getRGB());
+        drawRect(sliderX, sliderY, sliderX + (int)(sliderW * percent), sliderY + sliderH, new Color(80, 180, 255).getRGB());
     }
 
     private void drawModeSetting(Setting s, int x, int y, int mouseX, int mouseY) {
-        String label = s.getName() + ": " + s.getMode();
         drawRect(x + 4, y, x + 150, y + 18, new Color(30, 30, 30, 200).getRGB());
-        fontRendererObj.drawString(label, x + 8, y + 4, 0xCCCCCC);
+        fontRendererObj.drawString(s.getName() + ": " + s.getMode(), x + 8, y + 4, 0xCCCCCC);
     }
 
     @Override
@@ -241,19 +226,11 @@ public class ClickGUI extends GuiScreen {
                 } else if (mouseButton == 1) {
                     selectedModule = m;
                     showSettings = true;
-                    settingsX = guiWidth + 4;
-                    settingsY = 24;
                 }
                 return;
             }
             yOffset += 26;
         }
-    }
-
-    @Override
-    protected void mouseReleased(int mouseX, int mouseY, int state) {
-        super.mouseReleased(mouseX, mouseY, state);
-        dragging = false;
     }
 
     @Override
@@ -270,15 +247,8 @@ public class ClickGUI extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
-        if (keyCode == 1) {
-            close();
-            return;
-        }
-        if (keyCode == 0x9) {
-            showSettings = false;
-            selectedModule = null;
-            return;
-        }
+        if (keyCode == 1) { close(); return; }
+        if (keyCode == 0x9) { showSettings = false; selectedModule = null; return; }
         super.keyTyped(typedChar, keyCode);
     }
 
@@ -290,15 +260,7 @@ public class ClickGUI extends GuiScreen {
     }
 
     @Override
-    public boolean doesGuiPauseGame() {
-        return false;
-    }
+    public boolean doesGuiPauseGame() { return false; }
 
-    public void toggleVisibility() {
-        if (Minecraft.getMinecraft().currentScreen == this) {
-            close();
-        } else {
-            Minecraft.getMinecraft().displayGuiScreen(this);
-        }
-    }
+    public static ClickGUI getInstance() { return instance; }
 }

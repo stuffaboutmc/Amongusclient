@@ -1,112 +1,42 @@
 package myau.client.gui.font;
 
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.client.renderer.GlStateManager;
-import org.lwjgl.BufferUtils;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
 
 public class CustomFontRenderer {
+
     private Font font;
-    private int fontSize;
     private Map<Character, GlyphData> glyphCache = new HashMap<>();
-    private FontMetrics metrics;
-    private boolean initialized = false;
+    private int height;
+    private int ascent;
 
-    private static class GlyphData {
-        int glTextureId;
-        int width;
-        int height;
-    }
-
-    public CustomFontRenderer(String fontName, int size) {
-        this.fontSize = size;
-        try {
-            Font testFont = new Font(fontName, Font.PLAIN, size);
-            if (testFont.canDisplay('A') && testFont.getFamily().equalsIgnoreCase(fontName)) {
-                this.font = testFont;
-            } else {
-                this.font = new Font(Font.SANS_SERIF, Font.PLAIN, size);
-            }
-        } catch (Exception e) {
-            this.font = new Font(Font.SANS_SERIF, Font.PLAIN, size);
-        }
+    public CustomFontRenderer(Font font) {
+        this.font = font;
         initMetrics();
     }
 
     private void initMetrics() {
-        BufferedImage tmp = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = tmp.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+        BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
         g.setFont(font);
-        metrics = g.getFontMetrics();
+        FontMetrics fm = g.getFontMetrics();
+        this.height = fm.getHeight();
+        this.ascent = fm.getAscent();
         g.dispose();
-        initialized = true;
     }
 
-    public float drawString(String text, float x, float y, int color, boolean shadow) {
-        if (shadow) {
-            drawStringInternal(text, x + 1f, y + 1f, darkenColor(color));
-        }
-        return drawStringInternal(text, x, y, color);
-    }
-
-    private float drawStringInternal(String text, float x, float y, int color) {
-        if (text == null || text.isEmpty()) return x;
-        float currentX = x;
-        GlStateManager.enableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            GlyphData glyph = getGlyph(c);
-            if (glyph != null && glyph.glTextureId > 0) {
-                float a = (color >> 24 & 0xFF) / 255f;
-                float r = (color >> 16 & 0xFF) / 255f;
-                float g = (color >> 8 & 0xFF) / 255f;
-                float b = (color & 0xFF) / 255f;
-
-                GlStateManager.bindTexture(glyph.glTextureId);
-                GlStateManager.color(r, g, b, a);
-
-                GL11.glBegin(GL11.GL_QUADS);
-                GL11.glTexCoord2f(0, 0);
-                GL11.glVertex2f(currentX, y);
-                GL11.glTexCoord2f(1, 0);
-                GL11.glVertex2f(currentX + glyph.width, y);
-                GL11.glTexCoord2f(1, 1);
-                GL11.glVertex2f(currentX + glyph.width, y + glyph.height);
-                GL11.glTexCoord2f(0, 1);
-                GL11.glVertex2f(currentX, y + glyph.height);
-                GL11.glEnd();
-
-                currentX += glyph.width;
-            } else {
-                currentX += fontSize / 2;
-            }
-        }
-        GlStateManager.color(1, 1, 1, 1);
-        return currentX;
-    }
-        }
-        return currentX;
-    }
-
-    private GlyphData getGlyph(char c) {
+    private GlyphData getGlyphData(char c) {
         if (glyphCache.containsKey(c)) {
-            GlyphData cached = glyphCache.get(c);
-            if (cached.glTextureId > 0 && GL11.glIsTexture(cached.glTextureId)) {
-                return cached;
-            }
-            glyphCache.remove(c);
+            return glyphCache.get(c);
         }
 
-        int padding = 2;
         BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         g.setFont(font);
@@ -116,12 +46,10 @@ public class CustomFontRenderer {
         g.dispose();
 
         if (charWidth <= 0) {
-            charWidth = fm.charWidth(' ');
-        }
-        if (charHeight <= 0) {
-            charHeight = fontSize;
+            return null;
         }
 
+        int padding = 2;
         int texWidth = charWidth + padding * 2;
         int texHeight = charHeight + padding * 2;
 
@@ -177,28 +105,27 @@ public class CustomFontRenderer {
     }
 
     public int getStringWidth(String text) {
-        if (text == null || text.isEmpty()) return 0;
         int width = 0;
         for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (metrics != null) {
-                width += metrics.charWidth(c);
+            GlyphData glyph = getGlyphData(text.charAt(i));
+            if (glyph != null) {
+                width += glyph.width - 2;
             } else {
-                width += fontSize / 2;
+                width += 6;
             }
         }
         return width;
     }
 
     public int getHeight() {
-        return metrics != null ? metrics.getHeight() : fontSize;
+        return height;
     }
 
     public int getAscent() {
-        return metrics != null ? metrics.getAscent() : fontSize;
+        return ascent;
     }
 
-    private int darkenColor(int color) {
+    public int darken(int color) {
         int a = color >> 24 & 0xFF;
         int r = Math.max(0, (color >> 16 & 0xFF) - 40);
         int g = Math.max(0, (color >> 8 & 0xFF) - 40);
@@ -208,10 +135,16 @@ public class CustomFontRenderer {
 
     public void cleanUp() {
         for (GlyphData glyph : glyphCache.values()) {
-            if (glyph.glTextureId > 0) {
+            if (glyph.glTextureId > 0 && GL11.glIsTexture(glyph.glTextureId)) {
                 GL11.glDeleteTextures(glyph.glTextureId);
             }
         }
         glyphCache.clear();
+    }
+
+    public static class GlyphData {
+        public int glTextureId;
+        public int width;
+        public int height;
     }
 }

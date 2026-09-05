@@ -2,27 +2,30 @@ package com.stuffaboutmc.client.manager;
 
 import com.stuffaboutmc.client.Client;
 import com.stuffaboutmc.client.gui.ClickGUI;
+import com.stuffaboutmc.client.module.Module;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.input.Keyboard;
 
 public class KeybindManager {
 
+    private long lastToggle = 0;
+
     public void onTick() {
-        // RSHIFT toggle clickgui
         if (Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)) {
-            if (ClickGUI.instance != null) {
-                ClickGUI.instance.toggleVisibility();
-            } else {
+            long now = System.currentTimeMillis();
+            if (now - lastToggle > 200) {
+                lastToggle = now;
                 ClickGUI gui = new ClickGUI();
-                Minecraft.getMinecraft().displayGuiScreen(gui);
+                if (Minecraft.getMinecraft().currentScreen == gui) {
+                    Minecraft.getMinecraft().displayGuiScreen(null);
+                } else {
+                    Minecraft.getMinecraft().displayGuiScreen(gui);
+                }
             }
-            // prevent rapid toggling
-            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
         }
 
-        // module keybinds
         for (Module m : Client.instance.moduleManager.getModules()) {
             if (m.getKeybind() > 0 && Keyboard.isKeyDown(m.getKeybind())) {
-                // prevent spam
                 if (!m.wasPressed) {
                     m.toggle();
                     m.wasPressed = true;

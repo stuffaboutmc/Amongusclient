@@ -21,10 +21,9 @@ minecraft {
     mappings = 'stable_22'
 }
 
-// Separate configuration for dependencies you want to bundle
+// Configuration for dependencies to bundle (JNA + ASM)
 configurations {
     bundled
-    // Make bundled available for compilation as well
     compile.extendsFrom bundled
 }
 
@@ -33,10 +32,11 @@ repositories {
 }
 
 dependencies {
-    // Explicitly add Forge client to compile classpath – solves ClientChatEvent
+    // Forge client – needed for compilation (ClientChatEvent)
+    // Not bundled into the mod jar.
     compile 'net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9:universal'
 
-    // Dependencies to bundle (JNA + ASM) – only their .class files will be included
+    // Dependencies to bundle – only .class files will be included
     bundled 'net.java.dev.jna:jna:5.13.0'
     bundled 'net.java.dev.jna:jna-platform:5.13.0'
     bundled 'org.ow2.asm:asm:9.5'
@@ -49,7 +49,6 @@ jar {
         configurations.bundled.collect { zipTree(it).matching { include '**/*.class' } }
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',

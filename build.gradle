@@ -26,38 +26,36 @@ repositories {
 }
 
 dependencies {
-    // Explicitly add Forge client to compile classpath so ClientChatEvent is found
-    compile 'net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9:universal'
     compile 'net.java.dev.jna:jna:5.13.0'
     compile 'net.java.dev.jna:jna-platform:5.13.0'
     compile 'org.ow2.asm:asm:9.5'
     compile 'org.ow2.asm:asm-commons:9.5'
 }
 
-// ---- Override jar to produce a slim jar (only your classes) ----
-jar {
+// ---- Slim jar: only your compiled classes ----
+task slimJar(type: Jar) {
     from sourceSets.main.output
     include 'com/amongus/**/*.class'
+    archiveName = 'slim.jar'
+    destinationDir = file('build/libs')
 }
 
-// ---- After reobf, build final jar with everything ----
+// ---- Reobfuscate the slim jar ----
+reobfJar {
+    inputFile = file('build/libs/slim.jar')
+}
+reobfJar.dependsOn slimJar
+
+// ---- Final jar: obfuscated classes + resources + dependency class files ----
 task finalJar(type: Jar) {
     baseName = 'among-us-client'
     version = '1.0-Premium'
-
-    // Include the reobfuscated classes (the output of reobfJar)
     from { zipTree(reobfJar.outputs.files.singleFile) }
-
-    // Include your resources (config.json, fonts, mcmod.info)
     from sourceSets.main.resources
-
-    // Include only the .class files from dependencies (no META-INF etc.)
     from {
         configurations.compile.collect { zipTree(it).matching { include '**/*.class' } }
     }
-
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
@@ -65,10 +63,11 @@ task finalJar(type: Jar) {
                    'Can-Redefine-Classes': 'true',
                    'Implementation-Title': 'among us client Premium'
     }
-
-    // Ensure reobf runs before packaging
     dependsOn reobfJar
 }
 
-// Make the final jar the default build output
+// Disable the default jar task (to avoid confusion)
+jar.enabled = false
+
+// Make the build task produce the final jar
 build.dependsOn finalJar

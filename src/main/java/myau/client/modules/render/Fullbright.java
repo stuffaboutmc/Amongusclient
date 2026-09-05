@@ -1,7 +1,6 @@
-package com.stuffaboutmc.client.module.impl;
+package myau.client.module.impl;
 
-import com.stuffaboutmc.client.module.Module;
-import net.minecraft.client.Minecraft;
+import myau.client.module.Module;
 
 public class FullBright extends Module {
 
@@ -13,13 +12,12 @@ public class FullBright extends Module {
 
     @Override
     public void onEnable() {
-        oldGamma = Minecraft.getMinecraft().gameSettings.gammaSetting;
-        Minecraft.getMinecraft().gameSettings.gammaSetting = 100f;
+        oldGamma = mc.gameSettings.gammaSetting;
+        mc.gameSettings.gammaSetting = 100f;
     }
 
     @Override
     public void onDisable() {
-        Minecraft.getMinecraft().gameSettings.gammaSetting = oldGamma;
+        mc.gameSettings.gammaSetting = oldGamma;
     }
 }
- 

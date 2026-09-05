@@ -22,3 +22,4 @@ public class FullBright extends Module {
         Minecraft.getMinecraft().gameSettings.gammaSetting = oldGamma;
     }
 }
+ 

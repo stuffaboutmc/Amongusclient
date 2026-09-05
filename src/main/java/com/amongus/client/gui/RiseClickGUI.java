@@ -15,7 +15,6 @@ import java.util.*;
 
 public class RiseClickGUI extends GuiScreen {
 
-    // ---------- Get style from ClickGUIModule ----------
     private ClickGUIModule.Style getStyle() {
         return ClickGUIModule.getCurrentStyle();
     }
@@ -64,19 +63,13 @@ public class RiseClickGUI extends GuiScreen {
                 break;
         }
 
-        // Shadow and panel
         drawRect(windowX + 4, windowY + 4, windowX + w + 4, windowY + h + 4, 0x80000000);
         drawRect(windowX, windowY, windowX + w, windowY + h, bgColor);
         drawRect(windowX, windowY, windowX + w, windowY + 1, borderColor);
 
-        // Header – lowercase style name
         drawRect(windowX, windowY, windowX + w, windowY + 22, headerColor);
-        mc.fontRendererObj.drawStringWithShadow(
-                currentStyle.getDisplayName() + " clickgui",
-                windowX + 6, windowY + 7, 0xFFFFFF
-        );
+        mc.fontRendererObj.drawStringWithShadow(currentStyle.getDisplayName() + " clickgui", windowX + 6, windowY + 7, 0xFFFFFF);
 
-        // Module list
         List<Module> sorted = new ArrayList<>(ModuleManager.modules);
         sorted.sort(Comparator.comparing(Module::getName));
         int startY = windowY + 24;
@@ -106,7 +99,6 @@ public class RiseClickGUI extends GuiScreen {
             if (currentStyle == ClickGUIModule.Style.PRESTIGE) textColor = 0xD9D9D9;
             mc.fontRendererObj.drawStringWithShadow(mod.getName(), windowX + 8, yPos + 8, textColor);
 
-            // Keybind badge
             int key = mod.getKeyBind();
             if (key != 0) {
                 String keyName = Keyboard.getKeyName(key);
@@ -115,7 +107,6 @@ public class RiseClickGUI extends GuiScreen {
                 mc.fontRendererObj.drawStringWithShadow(keyName, windowX + w - 48 - kw, yPos + 8, 0xFFFFFF);
             }
 
-            // Toggle button
             if (currentStyle == ClickGUIModule.Style.VAPE) {
                 drawRect(windowX + w - 30, yPos + 8, windowX + w - 20, yPos + 18, mod.isEnabled() ? accentColor : 0xFF555555);
                 if (mod.isEnabled()) mc.fontRendererObj.drawStringWithShadow("✓", windowX + w - 27, yPos + 8, 0xFFFFFF);
@@ -128,20 +119,17 @@ public class RiseClickGUI extends GuiScreen {
                 drawRect(knobX, toggleY + 2, knobX + 12, toggleY + toggleH - 2, 0xFFFFFFFF);
             }
 
-            // Expand indicator (right-click to expand)
             if (hasProperties(mod)) {
                 mc.fontRendererObj.drawStringWithShadow("▶", windowX + w - 60, yPos + 8, 0x888888);
             }
         }
 
-        // Scrollbar
         if (total > maxVisible) {
             int barHeight = (int) ((float) maxVisible / total * (h - 24));
             int barY = startY + (int) ((float) scrollOffset / scrollMax * (h - 24 - barHeight));
             drawRect(windowX + w - 6, barY, windowX + w - 2, barY + barHeight, 0x66FFFFFF);
         }
 
-        // Expanded settings
         if (selectedModule != null && hasProperties(selectedModule)) {
             drawExpandedEditor(selectedModule, mouseX, mouseY);
         }
@@ -149,12 +137,10 @@ public class RiseClickGUI extends GuiScreen {
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
-    // ---------- Mouse handling ----------
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         super.mouseClicked(mouseX, mouseY, mouseButton);
 
-        // Drag header (left-click only)
         if (mouseButton == 0 && mouseX >= windowX && mouseX <= windowX + windowWidth && mouseY >= windowY && mouseY <= windowY + 22) {
             dragging = true;
             dragX = mouseX - windowX;
@@ -162,7 +148,6 @@ public class RiseClickGUI extends GuiScreen {
             return;
         }
 
-        // Module interactions
         List<Module> sorted = new ArrayList<>(ModuleManager.modules);
         sorted.sort(Comparator.comparing(Module::getName));
         for (int i = 0; i < sorted.size(); i++) {
@@ -170,7 +155,6 @@ public class RiseClickGUI extends GuiScreen {
             int yPos = windowY + 24 + i * cardHeight - (int) scrollOffset;
             if (yPos + cardHeight < windowY + 24 || yPos > windowY + windowHeight) continue;
 
-            // Left-click: toggle only on toggle button
             if (mouseButton == 0) {
                 int toggleX, toggleW = 30;
                 if (getStyle() == ClickGUIModule.Style.VAPE) toggleX = windowX + windowWidth - 30;
@@ -182,7 +166,6 @@ public class RiseClickGUI extends GuiScreen {
                 }
             }
 
-            // Right-click: expand/collapse settings (anywhere on card)
             if (mouseButton == 1) {
                 if (mouseX >= windowX + 2 && mouseX <= windowX + windowWidth - 2 && mouseY >= yPos && mouseY <= yPos + cardHeight) {
                     if (selectedModule == mod) {
@@ -194,7 +177,6 @@ public class RiseClickGUI extends GuiScreen {
                 }
             }
 
-            // Middle-click: keybind
             if (mouseButton == 2) {
                 if (mouseX >= windowX + 2 && mouseX <= windowX + windowWidth - 2 && mouseY >= yPos && mouseY <= yPos + cardHeight) {
                     mc.displayGuiScreen(new KeybindScreen(mod));
@@ -236,7 +218,6 @@ public class RiseClickGUI extends GuiScreen {
         return false;
     }
 
-    // ---------- Keybind screen ----------
     private class KeybindScreen extends GuiScreen {
         private final Module module;
         public KeybindScreen(Module mod) { this.module = mod; }
@@ -261,7 +242,6 @@ public class RiseClickGUI extends GuiScreen {
         }
     }
 
-    // ---------- Expanded editor ----------
     private void drawExpandedEditor(Module mod, int mouseX, int mouseY) {
         int x = windowX + 20;
         int y = windowY + 60;
@@ -318,7 +298,6 @@ public class RiseClickGUI extends GuiScreen {
         }
     }
 
-    // ---------- Utility ----------
     private boolean hasProperties(Module m) {
         return !getProperties(m).isEmpty();
     }
@@ -336,7 +315,6 @@ public class RiseClickGUI extends GuiScreen {
     private float getMin(Field f, Object obj) { return 0; }
     private float getMax(Field f, Object obj) { return 10; }
 
-    // ---------- Annotation ----------
     @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
     public @interface Property {}
 }

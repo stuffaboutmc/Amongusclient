@@ -1,26 +1,17 @@
-package myau.client.modules.movement;
+package myau.client.module.impl;
 
-import myau.client.core.Category;
-import myau.client.core.Module;
-import org.lwjgl.input.Keyboard;
+import myau.client.module.Module;
 
 public class Sprint extends Module {
+
     public Sprint() {
-        super("Sprint", "Automatically sprints when moving", Category.MOVEMENT, Keyboard.KEY_NONE);
+        super("Sprint", "Movement");
     }
 
     @Override
     public void onUpdate() {
-        if (mc.thePlayer == null) return;
-        if (mc.gameSettings.keyBindForward.isKeyDown()) {
+        if (mc.thePlayer.moveForward > 0) {
             mc.thePlayer.setSprinting(true);
-        }
-    }
-
-    @Override
-    public void onDisable() {
-        if (mc.thePlayer != null) {
-            mc.thePlayer.setSprinting(false);
         }
     }
 }

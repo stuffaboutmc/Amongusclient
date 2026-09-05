@@ -32,30 +32,32 @@ dependencies {
     compile 'org.ow2.asm:asm-commons:9.5'
 }
 
-// Slim jar with only your compiled classes (no resources, no deps) – reobf works cleanly
+// ---- Produce a slim jar with only your class files ----
 jar {
     from sourceSets.main.output
     include 'com/amongus/**/*.class'
+    // Give it a temporary name so it doesn't conflict with the final jar
+    archiveName = 'slim.jar'
 }
 
-// Full jar: obfuscated classes + resources + dependency .class files
+// ---- Reobfuscate that slim jar ----
+reobf {
+    // The default reobfJar task will use the slim.jar as input
+}
+
+// ---- Final jar: obfuscated classes + resources + dependency class files ----
 task finalJar(type: Jar) {
-    baseName = 'among-us-client'
-    version = '1.0-Premium'
-
-    // Obfuscated classes from reobfJar
-    from zipTree(reobfJar.outputs.files.singleFile)
-
-    // Your resources (config.json, fonts)
+    // Include the reobfuscated classes (from reobfJar)
+    from reobfJar
+    // Include your resources (config.json, fonts)
     from sourceSets.main.resources
-
-    // Dependency class files (only .class, no META‑INF)
+    // Include only the .class files from dependencies (no META-INF etc.)
     from {
         configurations.compile.collect { zipTree(it).matching { include '**/*.class' } }
     }
-
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
+    // Override the manifest
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
@@ -64,8 +66,11 @@ task finalJar(type: Jar) {
                    'Implementation-Title': 'among us client Premium'
     }
 
+    // Name the final jar as you expect
+    archiveName = archivesBaseName + '-' + version + '.jar'
+
     dependsOn reobfJar
 }
 
-// Make build produce the final jar
+// Make the default build task produce the final jar
 build.dependsOn finalJar

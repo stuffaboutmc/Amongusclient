@@ -6,6 +6,7 @@ import myau.client.module.impl.Speed;
 import myau.client.module.impl.Sprint;
 import myau.client.module.impl.FullBright;
 import myau.client.module.impl.KillAura;
+import myau.client.module.impl.Scaffold; // add if exists
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,7 @@ public class ModuleManager {
         modules.add(new Sprint());
         modules.add(new FullBright());
         modules.add(new KillAura());
+        modules.add(new Scaffold());
     }
 
     public static List<Module> getModules() { return modules; }

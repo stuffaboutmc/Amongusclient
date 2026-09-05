@@ -1,15 +1,11 @@
-[
-{
-    "modid": "amongusclient",
-    "name": "Among Us Client",
-    "description": "Among Us Client Premium - 33 modules, ClickGUI, HUD, Commands",
-    "version": "1.0.0",
-    "mcversion": "1.8.9",
-    "url": "",
-    "authorList": ["Among Us Team"],
-    "credits": "",
-    "logoFile": "",
-    "screenshots": [],
-    "dependencies": []
-}
-]
+[{
+  "modid": "amongusclient",
+  "name": "AmongUsClient",
+  "description": "Greatest bypasses of all times.",
+  "version": "1.0",
+  "mcversion": "1.8.9",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Shupo and buludali <3"],
+  "credits": ""
+}]

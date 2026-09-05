@@ -1,11 +1,11 @@
 package com.amongus.client.modules;
 
+import com.amongus.client.ModuleManager;
 import com.amongus.client.gui.RiseClickGUI;
 import net.minecraft.client.Minecraft;
 
 public class ClickGUIModule extends Module {
 
-    // Style enum with lowercase display names
     public enum Style {
         RISE("rise"),
         VAPE("vape"),
@@ -13,19 +13,9 @@ public class ClickGUIModule extends Module {
         PRESTIGE("prestige");
 
         private final String displayName;
-
-        Style(String name) {
-            this.displayName = name;
-        }
-
-        public String getDisplayName() {
-            return displayName;
-        }
-
-        @Override
-        public String toString() {
-            return displayName;
-        }
+        Style(String name) { this.displayName = name; }
+        public String getDisplayName() { return displayName; }
+        @Override public String toString() { return displayName; }
     }
 
     @RiseClickGUI.Property
@@ -39,8 +29,7 @@ public class ClickGUIModule extends Module {
     @Override
     public void onEnable() {
         Minecraft.getMinecraft().displayGuiScreen(new RiseClickGUI());
-        // toggle back off so it acts as a trigger
-        this.toggle();
+        this.toggle(); // turn off so it acts as a trigger
     }
 
     public static Style getCurrentStyle() {

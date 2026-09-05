@@ -32,22 +32,38 @@ dependencies {
     compile 'org.ow2.asm:asm-commons:9.5'
 }
 
+// Build the mod jar without dependencies – reobf works cleanly
 jar {
-    // Include dependency class files (but not their META-INF or other resources)
-    from {
-        configurations.compile.collect { 
-            zipTree(it).matching { 
-                include '**/*.class' 
-            } 
-        }
-    }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
                    'Can-Retransform-Classes': 'true',
                    'Can-Redefine-Classes': 'true',
-                   'Implementation-Title': 'among us client Premium'
+                   'Implementation-Title': 'among us client Premium',
+                   'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
     }
 }
+
+// Copy dependencies into build/libs
+task copyDeps(type: Copy) {
+    from configurations.compile
+    into 'build/libs'
+}
+build.dependsOn copyDeps
+
+// Create a distribution zip that bundles the mod jar and all dependency jars
+task distZip(type: Zip) {
+    archiveFileName = 'among-us-client-bundle.zip'
+    destinationDirectory = file('build/libs')
+
+    from('build/libs') {
+        include 'among-us-client-*.jar'
+        include '*.jar'
+        // exclude the zip itself if it exists
+        exclude 'among-us-client-bundle.zip'
+    }
+    dependsOn build
+}
+
+// Make the default build task also produce the distribution zip
+tasks.build.dependsOn distZip

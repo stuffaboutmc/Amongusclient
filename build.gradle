@@ -32,18 +32,22 @@ dependencies {
     compile 'org.ow2.asm:asm-commons:9.5'
 }
 
-// ---- Override jar to produce a slim jar (only your classes) ----
+// ---- Override jar: include only your class files (no resources, no deps) ----
 jar {
     from sourceSets.main.output
     include 'com/amongus/**/*.class'
+    // The default jar will be used as input for reobfJar
 }
 
-// ---- Build final jar with obfuscated classes, resources, and dependency .class files ----
-task finalJar(type: Jar) {
-    baseName = 'among-us-client'
-    version = '1.0-Premium'
+// ---- reobfJar will automatically run on the slim jar produced by the 'jar' task ----
+// No extra configuration needed; ForgeGradle's reobfJar uses the default jar output.
 
-    // Include the reobfuscated classes (output of reobfJar)
+// ---- finalJar: obfuscated classes + resources + dependency class files ----
+task finalJar(type: Jar) {
+    baseName = archivesBaseName
+    version = project.version
+
+    // Include the obfuscated classes from reobfJar
     from { zipTree(reobfJar.outputs.files.singleFile) }
 
     // Include your resources (config.json, fonts, mcmod.info)
@@ -64,8 +68,9 @@ task finalJar(type: Jar) {
                    'Implementation-Title': 'among us client Premium'
     }
 
+    // Ensure reobfJar runs before packaging
     dependsOn reobfJar
 }
 
-// Make the build task produce the final jar
+// Make the default build task produce the final jar
 build.dependsOn finalJar

@@ -33,21 +33,19 @@ dependencies {
 }
 
 jar {
-    from {
-        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    // Remove all META-INF files from dependencies to avoid reobf conflicts
-    exclude 'dummyThing'
-    exclude 'META-INF/**'
-
-    // Our own manifest is added separately and remains
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
                    'Can-Retransform-Classes': 'true',
                    'Can-Redefine-Classes': 'true',
-                   'Implementation-Title': 'among us client Premium'
+                   'Implementation-Title': 'among us client Premium',
+                   'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
     }
 }
+
+// Copy dependencies to build/libs so they are placed alongside the mod jar
+task copyDependencies(type: Copy) {
+    from configurations.compile
+    into 'build/libs'
+}
+build.dependsOn copyDependencies

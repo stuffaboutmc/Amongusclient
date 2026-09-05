@@ -32,34 +32,12 @@ dependencies {
     compile 'org.ow2.asm:asm-commons:9.5'
 }
 
-// ---- Override jar: include only your class files (no resources, no deps) ----
 jar {
     from sourceSets.main.output
-    include 'com/amongus/**/*.class'
-    // The default jar will be used as input for reobfJar
-}
-
-// ---- reobfJar will automatically run on the slim jar produced by the 'jar' task ----
-// No extra configuration needed; ForgeGradle's reobfJar uses the default jar output.
-
-// ---- finalJar: obfuscated classes + resources + dependency class files ----
-task finalJar(type: Jar) {
-    baseName = archivesBaseName
-    version = project.version
-
-    // Include the obfuscated classes from reobfJar
-    from { zipTree(reobfJar.outputs.files.singleFile) }
-
-    // Include your resources (config.json, fonts, mcmod.info)
-    from sourceSets.main.resources
-
-    // Include only .class files from dependencies (no META-INF etc.)
     from {
         configurations.compile.collect { zipTree(it).matching { include '**/*.class' } }
     }
-
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
@@ -67,10 +45,4 @@ task finalJar(type: Jar) {
                    'Can-Redefine-Classes': 'true',
                    'Implementation-Title': 'among us client Premium'
     }
-
-    // Ensure reobfJar runs before packaging
-    dependsOn reobfJar
 }
-
-// Make the default build task produce the final jar
-build.dependsOn finalJar

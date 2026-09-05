@@ -1,38 +1,51 @@
-package com.stuffaboutmc.client.manager;
+package myau.client.core;
 
-import com.stuffaboutmc.client.Client;
-import com.stuffaboutmc.client.gui.ClickGUI;
-import com.stuffaboutmc.client.module.Module;
-import net.minecraft.client.Minecraft;
-import org.lwjgl.input.Keyboard;
+import myau.client.module.Module;
+import myau.client.module.impl.Flight;
+import myau.client.module.impl.Speed;
+import myau.client.module.impl.Sprint;
+import myau.client.module.impl.FullBright;
+import myau.client.module.impl.KillAura;
 
-public class KeybindManager {
+import java.util.ArrayList;
+import java.util.List;
 
-    private long lastToggle = 0;
+public class ModuleManager {
 
-    public void onTick() {
-        if (Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)) {
-            long now = System.currentTimeMillis();
-            if (now - lastToggle > 200) {
-                lastToggle = now;
-                ClickGUI gui = new ClickGUI();
-                if (Minecraft.getMinecraft().currentScreen == gui) {
-                    Minecraft.getMinecraft().displayGuiScreen(null);
-                } else {
-                    Minecraft.getMinecraft().displayGuiScreen(gui);
-                }
-            }
+    private static List<Module> modules = new ArrayList<>();
+
+    public static void init() {
+        modules.add(new Flight());
+        modules.add(new Speed());
+        modules.add(new Sprint());
+        modules.add(new FullBright());
+        modules.add(new KillAura());
+    }
+
+    public static List<Module> getModules() { return modules; }
+
+    public static Module getModule(String name) {
+        for (Module m : modules) {
+            if (m.getName().equalsIgnoreCase(name)) return m;
         }
+        return null;
+    }
 
-        for (Module m : Client.instance.moduleManager.getModules()) {
-            if (m.getKeybind() > 0 && Keyboard.isKeyDown(m.getKeybind())) {
-                if (!m.wasPressed) {
-                    m.toggle();
-                    m.wasPressed = true;
-                }
-            } else {
-                m.wasPressed = false;
-            }
+    public static void onTick() {
+        for (Module m : modules) {
+            if (m.isEnabled()) m.onTick();
+        }
+    }
+
+    public static void onUpdate() {
+        for (Module m : modules) {
+            if (m.isEnabled()) m.onUpdate();
+        }
+    }
+
+    public static void onRender2D(float partialTicks) {
+        for (Module m : modules) {
+            if (m.isEnabled()) m.onRender2D(partialTicks);
         }
     }
 }

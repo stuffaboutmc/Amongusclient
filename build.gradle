@@ -21,25 +21,35 @@ minecraft {
     mappings = 'stable_22'
 }
 
+// Separate configuration for dependencies you want to bundle
+configurations {
+    bundled
+    // Make bundled available for compilation as well
+    compile.extendsFrom bundled
+}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    // No explicit Forge dependency – it's already provided by the ForgeGradle plugin.
-    // These will be bundled into the jar (only .class files).
-    compile 'net.java.dev.jna:jna:5.13.0'
-    compile 'net.java.dev.jna:jna-platform:5.13.0'
-    compile 'org.ow2.asm:asm:9.5'
-    compile 'org.ow2.asm:asm-commons:9.5'
+    // Explicitly add Forge client to compile classpath – solves ClientChatEvent
+    compile 'net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9:universal'
+
+    // Dependencies to bundle (JNA + ASM) – only their .class files will be included
+    bundled 'net.java.dev.jna:jna:5.13.0'
+    bundled 'net.java.dev.jna:jna-platform:5.13.0'
+    bundled 'org.ow2.asm:asm:9.5'
+    bundled 'org.ow2.asm:asm-commons:9.5'
 }
 
 jar {
     from sourceSets.main.output
     from {
-        configurations.compile.collect { zipTree(it).matching { include '**/*.class' } }
+        configurations.bundled.collect { zipTree(it).matching { include '**/*.class' } }
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',

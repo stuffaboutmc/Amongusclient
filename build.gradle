@@ -2,15 +2,12 @@ buildscript {
     repositories {
         mavenCentral()
         maven { url "https://files.minecraftforge.net/maven" }
-        maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'   // compatible with Gradle 4
     }
 }
 apply plugin: 'net.minecraftforge.gradle.forge'
-apply plugin: 'com.github.johnrengelman.shadow'
 
 version = '1.0-Premium'
 group = 'com.amongus'
@@ -35,19 +32,17 @@ dependencies {
     compile 'org.ow2.asm:asm-commons:9.5'
 }
 
-shadowJar {
-    classifier = null   // replaces the default jar with the fat jar
-    // Exclude duplicate files that break reobf
+jar {
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // Remove all META-INF files from dependencies to avoid reobf conflicts
     exclude 'dummyThing'
-    exclude 'META-INF/AL2.0'
-    exclude 'META-INF/LGPL2.1'
-    exclude 'META-INF/*.SF'
-    exclude 'META-INF/*.DSA'
-    exclude 'META-INF/*.RSA'
-    exclude 'META-INF/LICENSE'
-    exclude 'META-INF/NOTICE'
-    exclude 'META-INF/DEPENDENCIES'
     exclude 'META-INF/**'
+
+    // Our own manifest is added separately and remains
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
@@ -56,11 +51,3 @@ shadowJar {
                    'Implementation-Title': 'among us client Premium'
     }
 }
-
-// Reobfuscate the shadow jar (ForgeGradle will automatically find it)
-reobf {
-    shadowJar {}
-}
-
-// Ensure the build task produces the reobfuscated shadow jar
-tasks.build.dependsOn reobfShadowJar

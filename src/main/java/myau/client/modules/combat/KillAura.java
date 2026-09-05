@@ -1,74 +1,31 @@
-package myau.client.modules.combat;
+package com.stuffaboutmc.client.module.impl;
 
-import myau.client.core.Category;
-import myau.client.core.Module;
+import com.stuffaboutmc.client.module.Module;
+import com.stuffaboutmc.client.settings.Setting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.AxisAlignedBB;
-import org.lwjgl.input.Keyboard;
-
-import java.util.List;
 
 public class KillAura extends Module {
-    private double range = 6.0;
-    private int delay = 0;
-    private int tickDelay = 0;
 
     public KillAura() {
-        super("KillAura", "Attacks nearest player in range", Category.COMBAT, Keyboard.KEY_R);
-        addSetting(new Setting("Range", SettingType.NUMBER, 6.0, 3.0, 6.0));
+        super("KillAura", "Combat");
     }
 
     @Override
-    public void onEnable() {
-        tickDelay = 0;
+    public void setupSettings() {
+        addSetting(new Setting("Range", 4.0, 1.0, 8.0, 0.1));
+        addSetting(new Setting("HitDelay", true));
     }
 
     @Override
-    public void onUpdate() {
-        if (mc.thePlayer == null || mc.theWorld == null) return;
-
-        tickDelay++;
-        if (tickDelay < 4) return;
-        tickDelay = 0;
-
-        Entity target = findTarget();
-        if (target == null) return;
-
-        float[] rotations = getRotationsTo(target);
-        mc.thePlayer.rotationYaw = rotations[0];
-        mc.thePlayer.rotationPitch = rotations[1];
-
-        if (mc.thePlayer.getDistanceToEntity(target) <= range) {
-            mc.playerController.attackEntity(mc.thePlayer, target);
-            mc.thePlayer.swingItem();
-        }
-    }
-
-    private Entity findTarget() {
-        Entity closest = null;
-        double closestDist = range;
-        for (Object obj : mc.theWorld.loadedEntityList) {
-            if (obj instanceof EntityPlayer && obj != mc.thePlayer) {
-                EntityPlayer player = (EntityPlayer) obj;
-                if (player.isDead || player.getHealth() <= 0) continue;
-                double dist = mc.thePlayer.getDistanceToEntity(player);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closest = player;
+    public void onTick() {
+        for (Entity e : Minecraft.getMinecraft().theWorld.loadedEntityList) {
+            if (e instanceof EntityPlayer && e != Minecraft.getMinecraft().thePlayer) {
+                if (Minecraft.getMinecraft().thePlayer.getDistanceToEntity(e) < 4.0) {
+                    Minecraft.getMinecraft().playerController.attackEntity(Minecraft.getMinecraft().thePlayer, e);
                 }
             }
         }
-        return closest;
-    }
-
-    private float[] getRotationsTo(Entity entity) {
-        double diffX = entity.posX - mc.thePlayer.posX;
-        double diffY = (entity.posY + entity.getEyeHeight()) - (mc.thePlayer.posY + mc.thePlayer.getEyeHeight());
-        double diffZ = entity.posZ - mc.thePlayer.posZ;
-        double dist = Math.sqrt(diffX * diffX + diffZ * diffZ);
-        float yaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90.0F;
-        float pitch = (float) -Math.toDegrees(Math.atan2(diffY, dist));
-        return new float[]{yaw, pitch};
     }
 }

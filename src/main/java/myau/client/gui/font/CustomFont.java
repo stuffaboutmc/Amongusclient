@@ -1,29 +1,28 @@
 package myau.client.gui.font;
 
-import java.awt.Font;
+import java.awt.*;
 
 public class CustomFont {
+
     public static CustomFontRenderer TITLE;
     public static CustomFontRenderer HEADER;
     public static CustomFontRenderer BODY;
     public static CustomFontRenderer SMALL;
 
     public static void init() {
-        String fontName = findFont();
-        TITLE = new CustomFontRenderer(fontName, 22);
-        HEADER = new CustomFontRenderer(fontName, 17);
-        BODY = new CustomFontRenderer(fontName, 14);
-        SMALL = new CustomFontRenderer(fontName, 12);
-    }
-
-    private static String findFont() {
-        String[] candidates = {"Helvetica Neue", "SF Pro Display", "Segoe UI", "Arial", "SansSerif"};
-        for (String name : candidates) {
-            Font f = new Font(name, Font.PLAIN, 12);
-            if (f.canDisplay('A') && f.getFamily() != null && !f.getFamily().equals("Dialog")) {
-                return name;
-            }
+        try {
+            Font font = Font.createFont(Font.TRUETYPE_FONT, CustomFont.class.getResourceAsStream("/assets/amongusclient/fonts/Verdana.ttf"));
+            font = font.deriveFont(Font.PLAIN, 22);
+            TITLE = new CustomFontRenderer(font);
+            HEADER = new CustomFontRenderer(font.deriveFont(17f));
+            BODY = new CustomFontRenderer(font.deriveFont(14f));
+            SMALL = new CustomFontRenderer(font.deriveFont(12f));
+        } catch (Exception e) {
+            Font fallback = new Font("Arial", Font.PLAIN, 14);
+            TITLE = new CustomFontRenderer(fallback.deriveFont(22f));
+            HEADER = new CustomFontRenderer(fallback.deriveFont(17f));
+            BODY = new CustomFontRenderer(fallback);
+            SMALL = new CustomFontRenderer(fallback.deriveFont(12f));
         }
-        return "SansSerif";
     }
 }

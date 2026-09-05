@@ -32,7 +32,6 @@ dependencies {
     compile 'org.ow2.asm:asm-commons:9.5'
 }
 
-// Build the mod jar without dependencies – reobf works cleanly
 jar {
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
@@ -44,7 +43,7 @@ jar {
     }
 }
 
-// Copy dependencies into build/libs
+// Copy dependencies to build/libs so they are placed alongside the mod jar
 task copyDeps(type: Copy) {
     from configurations.compile
     into 'build/libs'
@@ -53,17 +52,14 @@ build.dependsOn copyDeps
 
 // Create a distribution zip that bundles the mod jar and all dependency jars
 task distZip(type: Zip) {
-    archiveFileName = 'among-us-client-bundle.zip'
-    destinationDirectory = file('build/libs')
-
+    baseName = 'among-us-client-bundle'
+    destinationDir = file('build/libs')
     from('build/libs') {
-        include 'among-us-client-*.jar'
         include '*.jar'
-        // exclude the zip itself if it exists
         exclude 'among-us-client-bundle.zip'
     }
     dependsOn build
 }
 
 // Make the default build task also produce the distribution zip
-tasks.build.dependsOn distZip
+build.dependsOn distZip

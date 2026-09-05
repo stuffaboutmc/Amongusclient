@@ -21,32 +21,22 @@ minecraft {
     mappings = 'stable_22'
 }
 
-// Configuration for dependencies to bundle (JNA + ASM)
-configurations {
-    bundled
-    compile.extendsFrom bundled
-}
-
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    // Forge client – needed for compilation (ClientChatEvent)
-    // Not bundled into the mod jar.
-    compile 'net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9:universal'
-
-    // Dependencies to bundle – only .class files will be included
-    bundled 'net.java.dev.jna:jna:5.13.0'
-    bundled 'net.java.dev.jna:jna-platform:5.13.0'
-    bundled 'org.ow2.asm:asm:9.5'
-    bundled 'org.ow2.asm:asm-commons:9.5'
+    // These will be bundled (only .class files)
+    compile 'net.java.dev.jna:jna:5.13.0'
+    compile 'net.java.dev.jna:jna-platform:5.13.0'
+    compile 'org.ow2.asm:asm:9.5'
+    compile 'org.ow2.asm:asm-commons:9.5'
 }
 
 jar {
     from sourceSets.main.output
     from {
-        configurations.bundled.collect { zipTree(it).matching { include '**/*.class' } }
+        configurations.compile.collect { zipTree(it).matching { include '**/*.class' } }
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {

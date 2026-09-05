@@ -1,38 +1,69 @@
 buildscript {
     repositories {
         mavenCentral()
-        maven { url = "http://files.minecraftforge.net/maven" }
+        maven { url = "https://maven.minecraftforge.net/" }
+        maven { url = "https://repo.spongepowered.org/maven" }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
+        classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
+        classpath "org.spongepowered:mixingradle:0.6-SNAPSHOT"
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "1.0.0"
-group = "myau.client"
+apply plugin: "net.minecraftforge.gradle.forge"
+apply plugin: "org.spongepowered.mixin"
+
+version = "1.0"
+group = "com.stuffaboutmc"
 archivesBaseName = "amongusclient"
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = targetCompatibility = "1.8"
 
 minecraft {
     version = "1.8.9-11.15.1.2318-1.8.9"
     runDir = "run"
-    mappings = "snapshot_20141130"
+    mappings = "stable_22"
+}
+
+repositories {
+    mavenCentral()
+    maven { url = "https://repo.spongepowered.org/maven" }
 }
 
 dependencies {
-    compile 'com.google.code.gson:gson:2.8.0'
+    compile("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
+        exclude module: "guava"
+        exclude module: "commons-io"
+        exclude module: "gson"
+    }
+}
+
+mixin {
+    defaultObfuscationEnv = "searge"
+    add sourceSets.main, "mixins.${archivesBaseName}.refmap.json"
 }
 
 processResources {
     inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
     from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-        expand 'version': project.version
+        include "mcmod.info"
+        expand "version": project.version, "mcversion": project.minecraft.version
     }
     from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+        exclude "mcmod.info"
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+            "FMLCorePlugin": "com.stuffaboutmc.client.MixinLoader",
+            "FMLCorePluginContainsFMLMod": "true",
+            "ForceLoadAsMod": "true",
+            "MixinConfigs": "mixins.amongusclient.json",
+            "TweakClass": "org.spongepowered.asm.launch.MixinTweaker",
+            "TweakOrder": "0"
+        )
     }
 }

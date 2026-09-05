@@ -21,23 +21,37 @@ minecraft {
     mappings = 'stable_22'
 }
 
+// Custom configuration for dependencies we want to bundle
+configurations {
+    modCompile
+}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile 'net.java.dev.jna:jna:5.13.0'
-    compile 'net.java.dev.jna:jna-platform:5.13.0'
-    compile 'org.ow2.asm:asm:9.5'
-    compile 'org.ow2.asm:asm-commons:9.5'
+    // Forge client – needed for compilation, but not bundled in the jar
+    compile 'net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9:universal'
+
+    // Dependencies to bundle (JNA + ASM)
+    modCompile 'net.java.dev.jna:jna:5.13.0'
+    modCompile 'net.java.dev.jna:jna-platform:5.13.0'
+    modCompile 'org.ow2.asm:asm:9.5'
+    modCompile 'org.ow2.asm:asm-commons:9.5'
 }
 
 jar {
+    // Include your own compiled classes and resources
     from sourceSets.main.output
+
+    // Include only .class files from the dependencies we want to bundle
     from {
-        configurations.compile.collect { zipTree(it).matching { include '**/*.class' } }
+        configurations.modCompile.collect { zipTree(it).matching { include '**/*.class' } }
     }
+
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',

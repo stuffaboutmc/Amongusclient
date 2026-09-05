@@ -1,4 +1,1 @@
-Augustus, but for those who cant afford it.
- billioniare bipas (trust)
- for now its shit at bypassing ngl
- 
+Curerently reworking the entire client, expect a update in a week or month, eg: 9/15 or 9/20/2026

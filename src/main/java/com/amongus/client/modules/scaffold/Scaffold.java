@@ -19,7 +19,7 @@ public class Scaffold extends Module {
     }
 
     public enum TowerMode { NONE, VANILLA, EXTRA, TELLY }
-    public enum KeepYMode { NONE, VANILLA, TELLY, TELLY_EXTENDED } // EXTRA removed, EXTRATELLY renamed
+    public enum KeepYMode { NONE, VANILLA, TELLY, TELLY_EXTENDED }
 
     private RotationMode rotationMode = RotationMode.SMOOTH;
     private TowerMode towerMode = TowerMode.TELLY;
@@ -35,11 +35,10 @@ public class Scaffold extends Module {
         if (mc.thePlayer == null) return;
         if (towerMode == TowerMode.TELLY) {
             boolean moving = mc.thePlayer.moveForward != 0 || mc.thePlayer.moveStrafing != 0;
-            if (hypixeltower && !moving && mc.gameSettings.keyBindJump.pressed) {
+            if (hypixeltower && !moving && mc.gameSettings.keyBindJump.isKeyDown()) {
                 InputSimulator.holdKey(KeyEvent.VK_SPACE, 380);
             }
         }
-        // Use TELLY_EXTENDED in place of EXTRATELLY
         if (keepY == KeepYMode.TELLY || keepY == KeepYMode.TELLY_EXTENDED) {
             if (mc.thePlayer.motionY < -0.1) {
                 InputSimulator.clickRight();

@@ -33,9 +33,7 @@ public class CustomFontRenderer {
     }
 
     private GlyphData getGlyphData(char c) {
-        if (glyphCache.containsKey(c)) {
-            return glyphCache.get(c);
-        }
+        if (glyphCache.containsKey(c)) return glyphCache.get(c);
 
         BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
@@ -45,9 +43,7 @@ public class CustomFontRenderer {
         int charHeight = fm.getHeight();
         g.dispose();
 
-        if (charWidth <= 0) {
-            return null;
-        }
+        if (charWidth <= 0) return null;
 
         int padding = 2;
         int texWidth = charWidth + padding * 2;
@@ -104,28 +100,42 @@ public class CustomFontRenderer {
         return texId;
     }
 
-    public int getStringWidth(String text) {
-        int width = 0;
+    public void drawString(String text, float x, float y, int color, boolean shadow) {
+        if (text == null || text.isEmpty()) return;
+        if (shadow) drawString(text, x + 1, y + 1, darken(color), false);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        float curX = x;
         for (int i = 0; i < text.length(); i++) {
             GlyphData glyph = getGlyphData(text.charAt(i));
-            if (glyph != null) {
-                width += glyph.width - 2;
-            } else {
-                width += 6;
-            }
+            if (glyph == null) { curX += 6; continue; }
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, glyph.glTextureId);
+            GL11.glColor4f(
+                ((color >> 16) & 0xFF) / 255f,
+                ((color >> 8) & 0xFF) / 255f,
+                (color & 0xFF) / 255f,
+                ((color >> 24) & 0xFF) / 255f
+            );
+            GL11.glBegin(GL11.GL_QUADS);
+            GL11.glTexCoord2f(0, 0);
+            GL11.glVertex2f(curX, y);
+            GL11.glTexCoord2f(1, 0);
+            GL11.glVertex2f(curX + glyph.width, y);
+            GL11.glTexCoord2f(1, 1);
+            GL11.glVertex2f(curX + glyph.width, y + glyph.height);
+            GL11.glTexCoord2f(0, 1);
+            GL11.glVertex2f(curX, y + glyph.height);
+            GL11.glEnd();
+            curX += glyph.width - 2;
         }
-        return width;
+        GL11.glDisable(GL11.GL_BLEND);
     }
 
-    public int getHeight() {
-        return height;
+    public void drawString(String text, float x, float y, int color) {
+        drawString(text, x, y, color, false);
     }
 
-    public int getAscent() {
-        return ascent;
-    }
-
-    public int darken(int color) {
+    private int darken(int color) {
         int a = color >> 24 & 0xFF;
         int r = Math.max(0, (color >> 16 & 0xFF) - 40);
         int g = Math.max(0, (color >> 8 & 0xFF) - 40);
@@ -133,11 +143,21 @@ public class CustomFontRenderer {
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
+    public int getStringWidth(String text) {
+        int width = 0;
+        for (int i = 0; i < text.length(); i++) {
+            GlyphData glyph = getGlyphData(text.charAt(i));
+            width += (glyph != null) ? glyph.width - 2 : 6;
+        }
+        return width;
+    }
+
+    public int getHeight() { return height; }
+    public int getAscent() { return ascent; }
+
     public void cleanUp() {
         for (GlyphData glyph : glyphCache.values()) {
-            if (glyph.glTextureId > 0 && GL11.glIsTexture(glyph.glTextureId)) {
-                GL11.glDeleteTextures(glyph.glTextureId);
-            }
+            if (glyph.glTextureId > 0) GL11.glDeleteTextures(glyph.glTextureId);
         }
         glyphCache.clear();
     }

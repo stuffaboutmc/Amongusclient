@@ -5,39 +5,50 @@ import net.minecraft.client.Minecraft;
 
 public class ClickGUIModule extends Module {
 
-    // Style enum – same as in the GUI
-    public enum Style { RISE, VAPE, AUGUSTUS, PRESTIGE }
+    // Style enum with lowercase display names
+    public enum Style {
+        RISE("rise"),
+        VAPE("vape"),
+        AUGUSTUS("augustus"),
+        PRESTIGE("prestige");
 
-    // Property – this will appear in the expanded settings
+        private final String displayName;
+
+        Style(String name) {
+            this.displayName = name;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     @RiseClickGUI.Property
     public Style guiStyle = Style.RISE;
 
     public ClickGUIModule() {
         super("ClickGUI", Category.RENDER);
-        this.setKeyBind(54); // default: Right Shift (keycode 54)
+        this.setKeyBind(54); // Right Shift
     }
 
     @Override
     public void onEnable() {
-        // Open the GUI when toggled on
         Minecraft.getMinecraft().displayGuiScreen(new RiseClickGUI());
-        // Immediately disable again so it acts like a trigger
-        this.toggle(); // this will call onDisable automatically
+        // toggle back off so it acts as a trigger
+        this.toggle();
     }
 
-    @Override
-    public void onDisable() {
-        // Nothing needed – GUI closes when player presses ESC
-    }
-
-    // Static method for the GUI to read the current style
     public static Style getCurrentStyle() {
-        // Find the ClickGUIModule instance
         for (Module mod : ModuleManager.modules) {
             if (mod instanceof ClickGUIModule) {
                 return ((ClickGUIModule) mod).guiStyle;
             }
         }
-        return Style.RISE; // fallback
+        return Style.RISE;
     }
 }

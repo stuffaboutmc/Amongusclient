@@ -33,32 +33,23 @@ dependencies {
 }
 
 jar {
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // Remove everything that upsets reobfJar
+    exclude 'META-INF/**'
+    exclude 'dummyThing'
+    exclude '**/*.RSA'
+    exclude '**/*.SF'
+    exclude '**/*.DSA'
+
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
                    'Can-Retransform-Classes': 'true',
                    'Can-Redefine-Classes': 'true',
-                   'Implementation-Title': 'among us client Premium',
-                   'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
+                   'Implementation-Title': 'among us client Premium'
     }
 }
-
-// Copy dependencies to build/libs
-task copyDeps(type: Copy) {
-    from configurations.compile
-    into 'build/libs'
-}
-
-// Create distribution zip (depends on jar and copyDeps, not on build)
-task distZip(type: Zip) {
-    baseName = 'among-us-client-bundle'
-    destinationDir = file('build/libs')
-    from('build/libs') {
-        include '*.jar'
-        exclude 'among-us-client-bundle.zip'
-    }
-    dependsOn jar, copyDeps   // no cycle
-}
-
-// Make the default build task produce the distribution zip
-build.dependsOn distZip

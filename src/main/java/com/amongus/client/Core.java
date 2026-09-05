@@ -14,14 +14,12 @@ public class Core {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        // Register modules
         ModuleManager.register(new ClickGUIModule());
         ModuleManager.register(new Scaffold());
         ModuleManager.register(new KillAura());
         ModuleManager.register(new Disabler());
         ModuleManager.register(new HUD());
 
-        // Register event handlers
         MinecraftForge.EVENT_BUS.register(new KeyInputHandler());
         MinecraftForge.EVENT_BUS.register(new CommandManager());
 

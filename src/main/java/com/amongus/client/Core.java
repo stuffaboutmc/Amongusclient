@@ -21,8 +21,9 @@ public class Core {
         ModuleManager.register(new Disabler());
         ModuleManager.register(new HUD());
 
-        // Register key input handler
+        // Register event handlers
         MinecraftForge.EVENT_BUS.register(new KeyInputHandler());
+        MinecraftForge.EVENT_BUS.register(new CommandManager());
 
         System.out.println("among us client Premium loaded — " + ModuleManager.modules.size() + " modules registered.");
     }

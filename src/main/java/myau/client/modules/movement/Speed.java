@@ -1,26 +1,24 @@
-package myau.client.modules.movement;
+package myau.client.module.impl;
 
-import myau.client.core.Category;
-import myau.client.core.Module;
-import org.lwjgl.input.Keyboard;
+import myau.client.module.Module;
+import myau.client.settings.Setting;
 
 public class Speed extends Module {
-    private double speedMultiplier = 1.5;
 
     public Speed() {
-        super("Speed", "Increases movement speed", Category.MOVEMENT, Keyboard.KEY_V);
-        addSetting(new Setting("Multiplier", SettingType.NUMBER, 1.5, 1.0, 5.0));
+        super("Speed", "Movement");
+    }
+
+    @Override
+    public void setupSettings() {
+        addSetting(new Setting("Mode", "BHop", "Strafe", "NCP"));
+        addSetting(new Setting("Speed", 1.2, 0.5, 3.0, 0.1));
     }
 
     @Override
     public void onUpdate() {
-        if (mc.thePlayer == null) return;
-        if (mc.thePlayer.moveForward != 0 || mc.thePlayer.moveStrafing != 0) {
-            float yaw = mc.thePlayer.rotationYaw;
-            double mx = -Math.sin(Math.toRadians(yaw)) * 0.26 * speedMultiplier;
-            double mz = Math.cos(Math.toRadians(yaw)) * 0.26 * speedMultiplier;
-            mc.thePlayer.motionX = mx;
-            mc.thePlayer.motionZ = mz;
+        if (mc.thePlayer.onGround) {
+            // speed logic here
         }
     }
 }

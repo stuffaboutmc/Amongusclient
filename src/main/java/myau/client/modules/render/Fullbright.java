@@ -1,24 +1,24 @@
-package myau.client.modules.render;
+package com.stuffaboutmc.client.module.impl;
 
-import myau.client.core.Category;
-import myau.client.core.Module;
-import org.lwjgl.input.Keyboard;
+import com.stuffaboutmc.client.module.Module;
+import net.minecraft.client.Minecraft;
 
-public class Fullbright extends Module {
-    private float oldGamma = 1.0F;
+public class FullBright extends Module {
 
-    public Fullbright() {
-        super("Fullbright", "Full brightness gamma", Category.RENDER, Keyboard.KEY_NONE);
+    private float oldGamma;
+
+    public FullBright() {
+        super("FullBright", "Visual");
     }
 
     @Override
     public void onEnable() {
-        oldGamma = mc.gameSettings.gammaSetting;
-        mc.gameSettings.gammaSetting = 100.0F;
+        oldGamma = Minecraft.getMinecraft().gameSettings.gammaSetting;
+        Minecraft.getMinecraft().gameSettings.gammaSetting = 100f;
     }
 
     @Override
     public void onDisable() {
-        mc.gameSettings.gammaSetting = oldGamma;
+        Minecraft.getMinecraft().gameSettings.gammaSetting = oldGamma;
     }
 }

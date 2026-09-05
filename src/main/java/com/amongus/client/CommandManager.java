@@ -15,9 +15,8 @@ public class CommandManager {
         String msg = event.message;
         if (!msg.startsWith(".")) return;
 
-        event.setCanceled(true); // prevent sending to server
+        event.setCanceled(true); // prevents sending to server
 
-        // Remove the leading '.' and split
         String[] parts = msg.substring(1).split(" ");
         if (parts.length == 0) return;
 

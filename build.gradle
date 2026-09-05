@@ -21,24 +21,36 @@ minecraft {
     mappings = 'stable_22'
 }
 
+// Separate configuration for dependencies we bundle
+configurations {
+    bundled
+    compile.extendsFrom bundled
+}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    // These will be bundled (only .class files)
-    compile 'net.java.dev.jna:jna:5.13.0'
-    compile 'net.java.dev.jna:jna-platform:5.13.0'
-    compile 'org.ow2.asm:asm:9.5'
-    compile 'org.ow2.asm:asm-commons:9.5'
+    // Forge client – needed for compilation (ClientChatEvent)
+    // This is NOT bundled into the jar.
+    compile 'net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9:universal'
+
+    // Dependencies to bundle – only .class files will be included
+    bundled 'net.java.dev.jna:jna:5.13.0'
+    bundled 'net.java.dev.jna:jna-platform:5.13.0'
+    bundled 'org.ow2.asm:asm:9.5'
+    bundled 'org.ow2.asm:asm-commons:9.5'
 }
 
 jar {
     from sourceSets.main.output
     from {
-        configurations.compile.collect { zipTree(it).matching { include '**/*.class' } }
+        configurations.bundled.collect { zipTree(it).matching { include '**/*.class' } }
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Exclude all META‑INF files from dependencies to avoid reobf errors
+    exclude 'META-INF/**'
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',

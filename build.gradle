@@ -32,23 +32,30 @@ dependencies {
     compile 'org.ow2.asm:asm-commons:9.5'
 }
 
-// Override the default jar task to produce a slim jar with only your compiled classes (no resources, no deps)
+// Slim jar with only your compiled classes (no resources, no deps) – reobf works cleanly
 jar {
     from sourceSets.main.output
     include 'com/amongus/**/*.class'
 }
 
-// After reobf, build a full jar that includes obfuscated classes, resources, and dependency class files
+// Full jar: obfuscated classes + resources + dependency .class files
 task finalJar(type: Jar) {
+    baseName = 'among-us-client'
+    version = '1.0-Premium'
+
     // Obfuscated classes from reobfJar
-    from zipTree(reobfJar.archivePath)
+    from zipTree(reobfJar.outputs.files.singleFile)
+
     // Your resources (config.json, fonts)
     from sourceSets.main.resources
+
     // Dependency class files (only .class, no META‑INF)
     from {
         configurations.compile.collect { zipTree(it).matching { include '**/*.class' } }
     }
+
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     manifest {
         attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
                    'Agent-Class': 'com.amongus.client.injector.AgentMain',
@@ -56,10 +63,9 @@ task finalJar(type: Jar) {
                    'Can-Redefine-Classes': 'true',
                    'Implementation-Title': 'among us client Premium'
     }
-    archiveName = archivesBaseName + '-' + version + '.jar'
-    destinationDir = file('build/libs')
+
     dependsOn reobfJar
 }
 
-// Make the default build task produce the final jar
+// Make build produce the final jar
 build.dependsOn finalJar

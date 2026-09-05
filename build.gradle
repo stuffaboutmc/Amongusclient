@@ -1,27 +1,46 @@
-plugins { 
-    id 'java' 
-    id 'com.github.johnrengelman.shadow' version '7.1.2' 
-} 
-group 'com.amongus' 
-version '1.0-Premium' 
-sourceCompatibility = 1.8 
-targetCompatibility = 1.8 
- 
-repositories { mavenCentral() } 
-dependencies { 
-    implementation 'org.ow2.asm:asm:9.5' 
-    implementation 'org.ow2.asm:asm-commons:9.5' 
-    implementation 'net.java.dev.jna:jna:5.13.0' 
-    implementation 'net.java.dev.jna:jna-platform:5.13.0' 
-} 
- 
-shadowJar { 
-    manifest { 
-        attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain', 
-                   'Agent-Class': 'com.amongus.client.injector.AgentMain', 
-                   'Can-Retransform-Classes': 'true', 
-                   'Can-Redefine-Classes': 'true', 
-                   'Implementation-Title': 'among us client Premium' 
-    } 
-    archiveFileName = 'among-us-client-Premium.jar' 
-} 
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url "https://files.minecraftforge.net/maven" }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
+    }
+}
+apply plugin: 'net.minecraftforge.gradle.forge'
+
+version = '1.0-Premium'
+group = 'com.amongus'
+archivesBaseName = 'among-us-client'
+
+sourceCompatibility = targetCompatibility = 1.8
+
+minecraft {
+    version = '1.8.9-11.15.1.2318-1.8.9'
+    runDir = 'run'
+    mappings = 'stable_22'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'net.java.dev.jna:jna:5.13.0'
+    compile 'net.java.dev.jna:jna-platform:5.13.0'
+    compile 'org.ow2.asm:asm:9.5'
+    compile 'org.ow2.asm:asm-commons:9.5'
+}
+
+jar {
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    manifest {
+        attributes 'Premain-Class': 'com.amongus.client.injector.AgentMain',
+                   'Agent-Class': 'com.amongus.client.injector.AgentMain',
+                   'Can-Retransform-Classes': 'true',
+                   'Can-Redefine-Classes': 'true',
+                   'Implementation-Title': 'among us client Premium'
+    }
+}

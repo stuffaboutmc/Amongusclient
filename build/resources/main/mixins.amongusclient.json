@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "minVersion": "0.7.11",
+  "package": "com.stuffaboutmc.client.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -2,16 +2,13 @@ buildscript {
     repositories {
         mavenCentral()
         maven { url = "https://maven.minecraftforge.net/" }
-        maven { url = "https://repo.spongepowered.org/maven" }
     }
     dependencies {
         classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
-        classpath "org.spongepowered:mixingradle:0.6-SNAPSHOT"
     }
 }
 
 apply plugin: "net.minecraftforge.gradle.forge"
-apply plugin: "org.spongepowered.mixin"
 
 version = "1.0"
 group = "com.stuffaboutmc"
@@ -27,20 +24,6 @@ minecraft {
 
 repositories {
     mavenCentral()
-    maven { url = "https://repo.spongepowered.org/maven" }
-}
-
-dependencies {
-    compile("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
-        exclude module: "guava"
-        exclude module: "commons-io"
-        exclude module: "gson"
-    }
-}
-
-mixin {
-    defaultObfuscationEnv = "searge"
-    add sourceSets.main, "mixins.${archivesBaseName}.refmap.json"
 }
 
 processResources {
@@ -58,12 +41,8 @@ processResources {
 jar {
     manifest {
         attributes(
-            "FMLCorePlugin": "com.stuffaboutmc.client.MixinLoader",
             "FMLCorePluginContainsFMLMod": "true",
-            "ForceLoadAsMod": "true",
-            "MixinConfigs": "mixins.amongusclient.json",
-            "TweakClass": "org.spongepowered.asm.launch.MixinTweaker",
-            "TweakOrder": "0"
+            "ForceLoadAsMod": "true"
         )
     }
 }
